@@ -4,6 +4,43 @@ from unittest import TestCase
 
 
 class TestGrammar(TestCase):
+    def test_batch_assign(self):
+        """
+        批量赋值；
+            可以通过python的语言特性为变量批量赋值，有两种方式：
+        1. 通过逗号表达式为若干变量批量赋值；
+        2. 通过list或tuple为若干变量批量赋值
+        """
+        a, b, c = 12, 13, 14
+        self.assertEqual(a, 12)
+        self.assertEqual(b, 13)
+        self.assertEqual(c, 14)
+
+        l = [121, 131, 141]
+        a, b, c = l
+        self.assertEqual(a, 121)
+        self.assertEqual(b, 131)
+        self.assertEqual(c, 141)
+
+    def test_division(self):
+        """
+        a / b：保留小数部分
+        a // b：小数部分为0
+        int(n)：将n转为整数
+        float(n)：将n转为浮点数
+        """
+        a = 5
+        b = 2.0
+        self.assertEqual(a / b, 2.5)
+        self.assertEqual(a // b, 2.0)
+        self.assertEqual(int(a / b), 2)
+        self.assertEqual(float(int(a / b)), 2.0)
+
+    def test_type_conversion(self):
+        a = 100.200
+        self.assertEqual(a, float(a))
+        self.assertNotEqual(a, int(a))
+
     def test_ternary_operator(self):
         """
         三元运算符：x if exp else y，当exp表达式为True时，值为x，否则为y
@@ -22,20 +59,6 @@ class TestGrammar(TestCase):
         c = a or b
         self.assertEqual(c, b)
 
-    def test_division(self):
-        """
-        a / b：保留小数部分
-        a // b：小数部分为0
-        int(n)：将n转为整数
-        float(n)：将n转为浮点数
-        """
-        a = 5
-        b = 2.0
-        self.assertEqual(a / b, 2.5)
-        self.assertEqual(a // b, 2.0)
-        self.assertEqual(int(a / b), 2)
-        self.assertEqual(float(int(a / b)), 2.0)
-
     def test_branch(self):
         a = 10
         b = 20
@@ -47,7 +70,7 @@ class TestGrammar(TestCase):
         else:
             c = 0
 
-        self.assertEqual(c, 20)
+        self.assertEqual(c, a if a > b else b)
 
     def test_while_loop(self):
         """
@@ -202,3 +225,29 @@ World"""
 
         self.assertTrue(a.enter)
         self.assertTrue(a.exit)
+
+    def test_yield(self):
+        """
+        yield相当于一个“迭代发生器”，
+            在函数（方法）中使用yield，则该函数表示一个范围（range），可以通过迭代的方式来访问。
+        但yield保证每次迭代才会生成一个值（而非生成整个序列），所以比较节省内存。
+            所以一般情况下，yield关键字位于一个循环内部，通过某种规则来产生迭代中的某个值
+        """
+
+        def xrange(min, max):
+            while min < max:
+                yield min
+                min += 1
+
+        self.assertListEqual(list(xrange(10, 20)), list(range(10, 20)))
+
+    def test_lambda(self):
+        """
+        lambda的本质就是匿名函数，但在python中有如下要求：
+        1. 用lambda关键字表示表达式开始；
+        2. lambda之后可以包含0到多个参数，参数用,分隔；
+        3. 所有参数之后有一个:，该:左边是lambda声明，右边是lambda内容；
+        4. lambda中必须且只能包含一个表达式，整个lambda的值即该表达式的值。
+        """
+        fn = lambda a, b: a if a > b else b
+        self.assertEqual(fn(10, 20), 20)
