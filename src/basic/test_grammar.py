@@ -2,6 +2,8 @@
 import random
 from unittest import TestCase
 
+TEST_VAR = 'GLOBAL'
+
 
 class TestGrammar(TestCase):
     def test_batch_assign(self):
@@ -188,44 +190,6 @@ World"""
             else:
                 self.assertTrue(regular, 'No exception cased')
 
-    # noinspection PyBroadException
-    def test_with(self):
-        """
-        with obj:
-            ...
-
-        with 关键字用于在异常开始和结束后自动执行代码
-        with 关键字之后为一个对象，该对象必须包含__enter__方法和__exit__方法
-        当with代码块开始执行时，obj对象的__enter__方法会执行一次
-        无论何种原因中断with代码块（执行完毕或抛出异常），obj对象的__exit__方法都一定会执行
-        """
-
-        class A:
-            def __init__(self):
-                self.enter = False
-                self.exit = False
-                self.__throwable = random.randint(0, 1) == 0
-
-            def __enter__(self):
-                self.enter = True
-
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                self.exit = True
-
-            def do_something(self):
-                if self.__throwable:
-                    raise Exception()
-
-        a = A()
-        try:
-            with a:
-                a.do_something()
-        except Exception:
-            pass
-
-        self.assertTrue(a.enter)
-        self.assertTrue(a.exit)
-
     def test_yield(self):
         """
         yield相当于一个“迭代发生器”，
@@ -241,6 +205,24 @@ World"""
 
         self.assertListEqual(list(xrange(10, 20)), list(range(10, 20)))
 
+        it = xrange(10, 20).__iter__()
+        n = 10
+        try:
+            while True:
+                self.assertEqual(n, it.__next__())
+                n += 1
+        except StopIteration:
+            pass
+
+        it = iter(xrange(10, 20))
+        n = 10
+        try:
+            while it:
+                self.assertEqual(n, next(it))
+                n += 1
+        except StopIteration:
+            pass
+
     def test_lambda(self):
         """
         lambda的本质就是匿名函数，但在python中有如下要求：
@@ -251,3 +233,148 @@ World"""
         """
         fn = lambda a, b: a if a > b else b
         self.assertEqual(fn(10, 20), 20)
+
+    def test_list_args(self):
+        """
+        通过 *name 表示的参数项可以传入任意多个参数
+        对于 func(*args)，则
+            func(1, 2, 3, 4, 5) 表示传入5个不定参数，都保存在 args 这个list对象中
+            func([1, 2, 3, 4, 5]) 则表示传入了一个参数，参数类型是list类型
+            令 l = [1, 2, 3, 4, 5]，则 func(*l) 表示传入了5个不定参数
+        """
+
+        def tuple_args(*args):
+            return args
+
+        expected_list = (1, 2, 3, 4, 5)
+        self.assertEqual(tuple_args(1, 2, 3, 4, 5), expected_list)  # 传入5个参数，相当于5项的list
+        self.assertEqual(tuple_args(expected_list), (expected_list,))  # 传入1个参数，相当于1项的list
+        self.assertEqual(tuple_args(*expected_list), expected_list)  # 传入5个参数，相当于5项的list
+
+    def test_map_args(self):
+        """
+        通过 **name 表示参数可以为任意个数，且组成一个dict对象，此时传参必须显式传递参数名
+        对于 func(**name) 则
+            func(a=1, b=2) 相当于传入两个参数，组成 {'a': 1, 'b': 2} 的dict对象
+            func({'a': 1, 'b': 2}) 不正确，因为只相当于传入一个参数，且没有显式设置参数名
+            令 d = {'a': 1, 'b': 2}, 则 func(**d) 相当于传入两个参数，组成 {'a': 1, 'b': 2} 的dict对象
+        """
+
+        def dict_args(**kwargs):
+            return kwargs
+
+        def list_dict_args(**kwargs):
+            return sorted(kwargs.keys()), sorted(kwargs.values())
+
+        expected_map = {'a': 1, 'b': 2, 'c': 3}
+        actual_map = dict_args(a=1, b=2, c=3)
+        self.assertDictEqual(expected_map, actual_map)
+
+        with self.assertRaises(TypeError):
+            dict_args(expected_map)
+
+        actual_map = dict_args(**expected_map)
+        self.assertDictEqual(actual_map, expected_map)
+
+        list_key, list_value = list_dict_args(**expected_map)
+        self.assertEqual(list_key, ['a', 'b', 'c'])
+        self.assertEqual(list_value, [1, 2, 3])
+
+    def test_global_var(self):
+        """
+        要在方法内部使用全局变量，需要：
+        1. 在模块文件中声明全局变量
+        2. 使用 global 关键字在方法内部声明全局变量
+        """
+        global TEST_VAR
+        self.assertEqual(TEST_VAR, 'GLOBAL')
+
+        TEST_VAR = 'LOCAL'
+        self.assertEqual(TEST_VAR, 'LOCAL')
+
+    @staticmethod
+    def outside(x):
+        def inside(y):
+            """
+            nonlocal 关键字指定某个变量非当前函数（方法）的局部变量
+            """
+            nonlocal x
+            x += 1
+            return x, y
+
+        return inside
+
+    def test_nested_function(self):
+        """
+        nonlocal 关键字，参考 outside 方法
+        """
+        func = TestGrammar.outside(10)
+        x, y = func(20)
+        self.assertEqual(x, 11)
+        self.assertEqual(y, 20)
+
+        x, y = func(20)
+        self.assertEqual(x, 12)
+        self.assertEqual(y, 20)
+
+    def test_with(self):
+        """
+        with 关键字常用于自动释放资源
+        如果一个类具备 __enter__, __exit__ 方法，则这个类的对象可以被 with 引用
+        1. 当进入 with 代码块时，对象的 __enter__ 方法被自动调用一次
+        2. 当 with 块结束时，__exit__方法被自动调用一次
+
+        with 的一般格式为：
+            with obj:
+                code
+
+            with obj as val:    这里使用了as，将把对象__enter__方法的返回值赋予val变量
+                code
+        """
+
+        class Test:
+            def __init__(self, throwable=True):
+                self.count = 0
+                self.__throwable = throwable
+
+            def __enter__(self):
+                self.count += 1
+                return self
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                self.count -= 1
+
+                # 如果在 with 块中引发了异常，则下述代码生效
+                self.exception_type = exc_type
+                self.exception = exc_val
+                self.traceback = exc_tb
+                return not self.__throwable  # return True if not raise the Exception
+
+        with Test() as t:
+            self.assertEqual(t.count, 1)
+        self.assertEqual(t.count, 0)
+        self.assertIsNone(t.exception)
+        self.assertIsNone(t.exception_type)
+        self.assertIsNone(t.traceback)
+
+        exception = None
+        try:
+            with Test() as t:
+                self.assertEqual(t.count, 1)
+                raise Exception
+        except Exception as e:
+            exception = e
+            self.assertEqual(t.count, 0)
+            self.assertEqual(t.exception, exception)
+            self.assertEqual(t.exception_type, Exception)
+            self.assertIsNotNone(t.traceback)
+        self.assertIsNotNone(exception)
+
+        exception = None
+        try:
+            with Test(False) as t:
+                self.assertEqual(t.count, 1)
+                raise Exception
+        except Exception as e:
+            exception = e
+        self.assertIsNone(exception)

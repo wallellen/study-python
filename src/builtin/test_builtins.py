@@ -5,7 +5,10 @@ from unittest import TestCase
 import functools
 
 TEST_GLOBAL_VAR = 100
-TEST_VAR = 'GLOBAL'
+
+
+def test():
+    pass
 
 
 class TestBuildInFunctions(TestCase):
@@ -63,7 +66,6 @@ class TestBuildInFunctions(TestCase):
 
         ascii(str)->string  this string contain
         """
-        print(ascii('测试'))
         self.assertEqual(ascii('测试'), "'\\u6d4b\\u8bd5'")
 
     def test_bin(self):
@@ -92,7 +94,6 @@ class TestBuildInFunctions(TestCase):
         ba = bytearray('Hello python', 'utf-8')
         self.assertTupleEqual(tuple(ba), expected_bytes)
 
-        print(bytes(expected_bytes))
         # compare the result
         self.assertEqual(str(bytes(expected_bytes), 'utf-8'), ba.decode('utf-8'))
 
@@ -151,7 +152,7 @@ class TestBuildInFunctions(TestCase):
         code = 'x = 1 + 1'  # 待编译的语句（字符串表示）
         compile_code = compile(code, '', 'exec')  # 将语句进行编译，返回值指向编译结果
         exec(compile_code)  # 执行编译结果
-        print(eval('x'), 2)  # 执行表达式，获取x变量的值
+        self.assertEqual(eval('x'), 2)  # 执行表达式，获取x变量的值
 
     def test_delattr(self):
         """
@@ -191,16 +192,15 @@ class TestBuildInFunctions(TestCase):
         t = Test()
         with self.assertRaises(AttributeError):  # 'AttributeError' exception expected
             delattr(t, 'x')  # delete attribute 'x' from 't' object， or use del t.x instead
-            print(t.x)  # no attribute 'x' in 't', exception caused
+            self.assertEqual(t.x, 100)
 
         with self.assertRaises(AttributeError):
             del t.v  # delete attribute 'v' from 't' object, or use del t.v instead
-            print(t.v)  # no attribute 'x' in 't', exception caused
+            self.assertEqual(t.v, 300)  # no attribute 'x' in 't', exception caused
 
     def test_dict(self):
         """
-        dict函数的作用是
-        :return:
+        dict用于产生一个字典对象，该函数具备任意数量参数，参数名为字典项的key，参数值为字典项的value
         """
         expected_dict = {'a': 1, 'b': 2, 'c': 3}
 
@@ -221,6 +221,10 @@ class TestBuildInFunctions(TestCase):
         self.assertDictEqual(_dict, expected_dict)
 
     def test_dir(self):
+        """
+        dir函数用于列举一个包、模块或对象中包含的名称（变量名，属性名，方法名等）
+        """
+
         class Test1:
             def __dir__(self):
                 return ['a', 'b', 'c']
@@ -238,12 +242,19 @@ class TestBuildInFunctions(TestCase):
         self.assertListContains(['a', 'b', 'c'], dir(t))
 
     def test_divmod(self):
+        """
+        divmod(a, b) 返回一个tuple, 相当于 (a // b, a % b)
+        """
         a = 3
         b = 2
+
         # Result is a list
         self.assertEqual(divmod(a, b), (a // b, a % b))
 
     def test_enumerate(self):
+        """
+        enumerate(iterator) 方法返回一个迭代器，迭代的每一项是一个tuple，包含索引和值
+        """
         nums = ['one', 'two', 'three', 'four']
         self.assertTupleEqual(tuple(enumerate(nums)), ((0, 'one'), (1, 'two'), (2, 'three'), (3, 'four')))
 
@@ -253,39 +264,82 @@ class TestBuildInFunctions(TestCase):
             i += 1
 
     def test_eval(self):
+        """
+        exec(str) 执行一个字符串表示的python表达式，并得到执行的结果
+        """
         exec('x = 1')
         self.assertEqual(eval('x + 1'), 2)  # execute the express by string
 
     def test_exec(self):
+        """
+        exec(str) 执行一段字符串表示的python代码
+        """
         exec('''x = 0
 for i in range(0, 10):
     x += 1
-print(x)''')
+y = x''')
         self.assertEqual(eval('x'), 10)
+        self.assertEqual(eval('y'), eval('x'))
 
     def test_filter(self):
+        """
+        filter(lambda, iterator) 方法，根据lambda表达式设定的规则，从集合中过滤所需的元素
+        """
         a = [1, 2, 3, 4, 5]
         self.assertTupleEqual(tuple(filter(lambda it: it % 2 == 0, a)), (2, 4))
 
     def test_float(self):
+        """
+        float(num) 通过对象的__float__方法将对象转为浮点数
+        """
+
+        # 整数转为浮点数
         a = 10
         self.assertEqual(type(a), int)
         self.assertEqual(type(float(a)), float)
 
+        # 字符串转为浮点数
+        a = "123.123"
+        self.assertEqual(type(a), str)
+        self.assertEqual(float(a), 123.123)
+
+        class A:
+            def __init__(self, value):
+                self.__value = value
+
+            def __float__(self):
+                return float(self.__value)
+
+        # 其它类型转为浮点数
+        a = A(123.123)
+        self.assertEqual(type(a), A)
+        self.assertEqual(type(float(a)), float)
+        self.assertEqual(float(a), 123.123)
+
     def test_format(self):
+        """
+        format(obj, str) 用于将第一个参数根据第二个参数规定的格式进行格式化，格式化依据第一个参数对象的__format__方法
+        """
         self.assertEqual(format(123, '.2f'), '123.00')
 
         class Test:
+            def __init__(self, val):
+                self.__val = val
+
             def __format__(self, format_spec):
                 return {
-                    'm': lambda: 'format by \'m\'',
-                    'n': lambda: 'format by \'n\''
+                    '%m': lambda: 'm' + str(self.__val),
+                    '%n': lambda: 'n' + str(self.__val)
                 }[format_spec]()
 
-        t = Test()
-        self.assertEqual(format(t, 'm'), 'format by \'m\'')
+        t = Test(123)
+        self.assertEqual(format(t, '%m'), 'm123')
 
     def test_getattr(self):
+        """
+        getattr(obj, 'attr_name') 方法用于获取指定对象的指定属性值
+        """
+
         class Test:
             TEST_VAL = 10
 
@@ -299,11 +353,18 @@ print(x)''')
         self.assertEqual(getattr(t, 'x'), 100)
 
     def test_globals(self):
+        """
+        globals() 方法返回一个Dict对象，包括当前模块的所有全局量（包括函数，变量，包等）
+        """
         global_dict = globals()
         self.assertTrue('TEST_GLOBAL_VAR' in global_dict.keys())
         self.assertEqual(global_dict['TEST_GLOBAL_VAR'], TEST_GLOBAL_VAR)
 
     def test_hasattr(self):
+        """
+        hasattr(obj, 'attr_name') 判断指定对象是否拥有指定属性
+        """
+
         class Test:
             TEST_VAL = 10
 
@@ -316,6 +377,10 @@ print(x)''')
         self.assertTrue(hasattr(t, 'x'))
 
     def test_hash(self):
+        """
+        hash(obj) 通过对象的__hash__方法返回对象的hash值
+        """
+
         class Test:
             def __hash__(self):
                 return 1234567
@@ -324,11 +389,21 @@ print(x)''')
         self.assertEqual(hash(t), 1234567)
 
     def test_hex(self):
+        """
+        hex(number) 返回字符串，表示指定数值的16进制值
+        """
         # convert number to hex string
         self.assertEqual(hex(255), '0xff')
 
     def test_int(self):
+        """
+        int(str, base=10) 方法将字符串转为整数，第二个参数表示数值的进制
+        int(obj) 方法根据指定对象的__int__方法将对象转为整数
+        """
         val = int(0xFF)
+        self.assertEqual(val, 255)
+
+        val = int('0xFF', 16)
         self.assertEqual(val, 255)
 
         class Test:
@@ -347,6 +422,9 @@ print(x)''')
         self.assertEqual(int(t), 100)
 
     def test_isinstance(self):
+        """
+        isinstance(obj, type) 用于判断一个对象是否是指定类型的对象
+        """
         s = 'Hello'
         self.assertTrue(isinstance(s, str))
 
@@ -355,6 +433,10 @@ print(x)''')
         self.assertTrue(isinstance(s, object))
 
     def test_issubclass(self):
+        """
+        issubclass(obj, type) 用于判断一个类是否是指定类型的子类
+        :return:
+        """
         self.assertTrue(issubclass(str, object))
 
         class Base:
@@ -363,24 +445,38 @@ print(x)''')
         class Child(Base):
             pass
 
+        self.assertTrue(issubclass(Base, object))
         self.assertTrue(issubclass(Child, Base))
 
     def test_iter(self):
+        """
+        iter(obj) 方法通过指定对象的__iter__方法返回迭代器对象
+        next(iter) 方法获取一个迭代器指向的当前元素，并令迭代器指向下一个元素
+        """
+
+        class TestIterator:
+            """
+            迭代器类
+            """
+
+            def __init__(self, _cur, _max):
+                self.__cur = _cur
+                self.__max = _max
+
+            def __next__(self):
+                if self.__cur == self.__max:
+                    raise StopIteration()  # 如果迭代器没有下一个元素，则抛出该异常
+                _cur = self.__cur
+                self.__cur += 1
+                return _cur
+
         class Test:
             def __init__(self, _min, _max):
                 self.__min = _min
                 self.__max = _max
 
             def __iter__(self):
-                self.__cur = self.__min
-                return self
-
-            def __next__(self):
-                if self.__cur == self.__max:
-                    raise StopIteration()
-                _cur = self.__cur
-                self.__cur += 1
-                return _cur
+                return TestIterator(self.__min, self.__max)
 
         t = Test(1, 10)
         it = iter(t)
@@ -399,6 +495,9 @@ print(x)''')
             val += 1
 
     def test_len(self):
+        """
+        len(obj) 通过对象的__len__方法返回一个长度值
+        """
         s = '12345'
         self.assertEqual(len(s), 5)
 
@@ -413,7 +512,12 @@ print(x)''')
         self.assertEqual(len(t), 10)
 
     def test_list(self):
-        class Test:
+        """
+        list(iter) 将一个迭代器返回的所有元素组成一个list对象
+        """
+        self.assertListEqual(list(x if x % 2 == 0 else 0 for x in range(1, 6)), [0, 2, 0, 4, 0])
+
+        class Iterator:
             def __init__(self, _min, _max):
                 self.__min = _min
                 self.__max = _max
@@ -429,20 +533,29 @@ print(x)''')
                 self.__cur += 1
                 return _cur
 
-        t = Test(1, 6)
+        t = Iterator(1, 6)
         self.assertListEqual(list(t), [1, 2, 3, 4, 5])
 
     def test_locals(self):
+        """
+        locals() 方法返回当前函数（方法）中的局部量（包括方法、变量、导入的包等）
+        """
         x = 100
         _dict = locals()
         self.assertTrue('x' in _dict.keys())
         self.assertEqual(_dict['x'], 100)
 
     def test_map(self):
+        """
+        map(func, iter) 方法将迭代器返回的值通过一个函数映射为其它类型的集合对象
+        """
         res = map(lambda x: x % 2 == 0, range(1, 5))
         self.assertTupleEqual(tuple(res), (False, True, False, True))
 
     def test_max(self):
+        """
+        max(iter, key) 返回迭代器中最大的元素，key参数为一个函数，表示要比较的元素
+        """
         lst = (1, 2, 3, 4, 5)
         res = max(lst)
         self.assertEqual(res, 5)
@@ -453,11 +566,25 @@ print(x)''')
         res = max(1, -2, 3, 4, -5, key=lambda x: -x if x % 2 == 0 else x)
         self.assertEqual(res, 3)  # 3 % 2 = 1 => 3
 
+        # 通过'cmp_to_key'函数可以将一个比较函数转为key函数，修改比较逻辑会影响到max方法的返回值
+        res = max(1, -2, 3, 4, -5, key=functools.cmp_to_key(lambda a, b: b - a))
+        self.assertEqual(res, -5)
+
     def test_memoryview(self):
+        """
+        memoryview(buffer) 返回一个迭代器，表示一个byte缓冲对象的内存视图
+        """
         memv = memoryview(b'abcde')
         self.assertTupleEqual(tuple(memv), (97, 98, 99, 100, 101))
 
+        memv = memoryview(bytearray('abcde', 'utf-8'))
+        self.assertTupleEqual(tuple(memv), (97, 98, 99, 100, 101))
+
     def test_min(self):
+        """
+        min(iter, key) 返回迭代器中最小的元素，key参数为一个函数，表示要比较的元素
+        参考 test_max 函数
+        """
         lst = (1, 2, 3, 4, 5)
         res = min(lst)
         self.assertEqual(res, 1)
@@ -468,7 +595,15 @@ print(x)''')
         res = min(1, -2, 3, 4, -5, key=lambda x: -x if x % 2 == 0 else x)
         self.assertEqual(res, -5)  # -5 % 2 = -1 => -5
 
+        res = min(1, -2, 3, 4, -5, key=functools.cmp_to_key(lambda a, b: b - a))
+        self.assertEqual(res, 4)  # -5 % 2 = -1 => -5
+
     def test_next(self):
+        """
+        next(iter) 方法返回迭代器指向的当前元素，并令迭代器指向下一个元素
+        参考 test_iter 函数
+        """
+
         class Test:
             def __init__(self, _min, _max):
                 self.__min = _min
@@ -492,11 +627,20 @@ print(x)''')
             index += 1
 
     def test_oct(self):
+        """
+        oct(int) 返回一个字符串，表示指定整数的8进制形式
+        """
         o = oct(8)
         self.assertEqual(o, '0o10')
 
     def test_open(self):
-        f = None
+        """
+        file = open(file_name, mode, encoding) 函数打开一个文件用于读写访问，返回文件对象
+        file.write(str/buffer) 写入文件
+        file.read(size) 读取文件
+        file.seek(offset) 移动文件指针
+        """
+
         try:
             # 'r'	open for reading (default)
             # 'w'	open for writing, truncating the file first
@@ -506,37 +650,41 @@ print(x)''')
             # 't'	text mode (default)
             # '+'	open a disk file for updating (reading and writing)
             # 'U'	universal newlines mode (deprecated)
-            f = open('test.txt', 'w', encoding='gbk')
-            self.assertTrue(f.writable())
-            f.writelines(('line 1\n', 'line 2\n', 'line 3'))
-            f.seek(0)
-            f.write('LINE')
-            f.close()
+            with open('test.txt', 'w', encoding='gbk') as f:
+                self.assertTrue(f.writable())
+                f.writelines(('line 1\n', 'line 2\n', 'line 3'))
+                f.seek(0)
+                f.write('LINE')
 
-            f = open('test.txt', 'r', encoding='gbk')
-            self.assertEqual(f.readline(), 'LINE 1\n')
-            self.assertEqual(f.readline(), 'line 2\n')
-            self.assertEqual(f.readline(), 'line 3')
-            self.assertEqual(f.readline(), '')  # at the end of line
+            with open('test.txt', 'r', encoding='gbk') as f:
+                self.assertEqual(f.readline(), 'LINE 1\n')
+                self.assertEqual(f.readline(), 'line 2\n')
+                self.assertEqual(f.readline(), 'line 3')
+                self.assertEqual(f.readline(), '')  # at the end of line
 
-            f.seek(0)
-            s = 'LINE 1\nline 2\nline 3'
-            self.assertEqual(f.read(len(s)), s)
-            f.seek(0)
+                f.seek(0)
+                s = 'LINE 1\nline 2\nline 3'
+                self.assertEqual(f.read(len(s)), s)
+                f.seek(0)
 
-            for c in s:
-                self.assertEqual(f.read(1), c)
-            self.assertEqual('', f.read(1))  # at the end of line
+                for c in s:
+                    self.assertEqual(f.read(1), c)
+                self.assertEqual('', f.read(1))  # at the end of line
         finally:
-            f.close()
-            self.assertTrue(f.closed)
             os.remove('test.txt')
 
     def test_ord(self):
+        """
+        ord(str) 获取一个字符的ASCII编码
+        chr(code) 获取一个ASCII编码所代表的字符
+        """
         n = ord('a')
         self.assertEqual('a', chr(n))
 
     def test_pow(self):
+        """
+        pow(n, x) 计算n的x次方，相当于'n ** x'
+        """
         n = pow(2, 2)
         self.assertEqual(n, 2 ** 2)
 
@@ -544,6 +692,13 @@ print(x)''')
         self.assertEqual(n, 2 ** 2 % 2)
 
     def test_property(self):
+        """
+        @property func() 注解注解一个方法，令其表示一个属性值
+        @func.setter 注解表示属性的设置方法
+        @func.getter 注解表示属性的获取方法
+        @func.deleter 注解表示属性的删除方法
+        """
+
         class Test:
             def __init__(self, val):
                 self.__value = val
@@ -568,9 +723,14 @@ print(x)''')
 
         del t.value
         with self.assertRaises(AttributeError):
-            print(t.value)
+            self.assertEqual(t.value, 200)
 
     def test_range(self):
+        """
+        range(max)
+        range(min, max)
+        range(min, max, step) 函数表示一个范围，返回一个从min到max - 1的迭代器
+        """
         r = range(5)
         self.assertEqual(tuple(r), (0, 1, 2, 3, 4))
 
@@ -580,7 +740,12 @@ print(x)''')
         r = range(1, 5, 2)
         self.assertEqual(tuple(r), (1, 3))
 
-    def test_repr(self):
+    def test_str_and_repr(self):
+        """
+        str(obj) 函数通过对象的__str__方法返回字符串
+        repr(obj) 函数通过对象的__repr__方法返回字符串
+        一般情况下，repr返回的字符串要比str方法返回的字符串更底层一些
+        """
         s = 'test'
         self.assertEqual(s, str(s))
         self.assertEqual(s, eval(repr(s)))
@@ -589,17 +754,21 @@ print(x)''')
             def __init__(self, val):
                 self.__val = val
 
-            def __repr__(self):
-                return '{name}:{value}'.format(name=self.class_name, value=self.__val)
+            def __str__(self):
+                return str(self.__val)
 
-            @property
-            def class_name(self):
-                return self.__class__.__name__
+            def __repr__(self):
+                return '{name}:{value}'.format(name=self.__class__.__name__, value=self.__val)
 
         t = Test(100)
+        self.assertEqual(str(t), '100')
         self.assertEqual(repr(t), 'Test:100')
 
     def test_reversed(self):
+        """
+        reversed(seque) 返回一个序列的逆序序列
+        reversed(iter) 通过迭代器对象的__reversed__获取一个反向迭代器
+        """
         s = [1, 2, 3]
         self.assertEqual(tuple(reversed(s)), (3, 2, 1))
 
@@ -626,6 +795,10 @@ print(x)''')
         self.assertEqual(tuple(reversed(t)), (4, 3, 2, 1))
 
     def test_round(self):
+        """
+        round(float) 返回指定小数位的浮点数，对多出的小数位进行四舍五入
+        round(obj) 通过对象的__round__方法对指定对象进行小数位保留操作
+        """
         n = round(123.456, 2)
         self.assertEqual(n, 123.46)
 
@@ -644,14 +817,21 @@ print(x)''')
         self.assertEqual(round(t, 2), 123.46)
 
     def test_set(self):
-        _set = {1, 1, 2, 2, 3, 3, 4, 4}  # define a set
-        self.assertSetEqual(_set, {1, 2, 3, 4})
+        """
+        set(seque) 将一个序列转为set集合
+        """
+        s = {1, 1, 2, 2, 3, 3, 4, 4}  # define a set
+        self.assertSetEqual(s, {1, 2, 3, 4})
 
-        _tuple = (1, 1, 2, 2, 3, 3, 4, 4)
-        _set = set(_tuple)
-        self.assertEqual(_set, {1, 2, 3, 4})
+        t = (1, 1, 2, 2, 3, 3, 4, 4)
+        s = set(t)
+        self.assertEqual(s, {1, 2, 3, 4})
 
     def test_setattr(self):
+        """
+        setattr(obj, attr_name, value) 用于向指定对象设置指定属性
+        """
+
         class Test:
             pass
 
@@ -662,17 +842,24 @@ print(x)''')
         self.assertEqual(getattr(t, 'a'), 100)
 
     def test_slice(self):
-        _list = (1, 2, 3, 4, 5)
+        """
+        slice(start, end, step) 表示一个下标范围，可以从序列中按此返回获取子集
+        """
+        l = (1, 2, 3, 4, 5)
         s = slice(2)
-        self.assertEqual(_list[s], _list[:2])
+        self.assertEqual(l[s], l[:2])
 
         s = slice(2, 5)
-        self.assertEqual(_list[s], _list[2:5])
+        self.assertEqual(l[s], l[2:5])
 
         s = slice(2, 5, 2)
-        self.assertEqual(_list[s], _list[2:5:2])
+        self.assertEqual(l[s], l[2:5:2])
 
     def test_sorted(self):
+        """
+        sorted(seque, key) 返回一个经过排序的新序列, key是一个函数，返回排序时要比较的值
+        cmp_to_key(func) 方法用于将比较函数转换为key函数
+        """
         rand = Random()
         expected_list = [1, 2, 3, 4, 5]
         shuffle_list = expected_list.copy()
@@ -701,23 +888,33 @@ print(x)''')
                 return '{0}:{1}'.format(self.__name, self.__value)
 
         expected_list = [Test('a', 400), Test('b', 300), Test('c', 200), Test('d', 100)]
+        # 通过key函数返回要比较的值
         shuffle_list = sorted(expected_list, key=lambda t: t.name)
         self.assertEqual(shuffle_list, expected_list)
 
         expected_list = [Test('a', 400), Test('b', 300), Test('c', 200), Test('d', 100)]
+        # 通过key函数返回要比较的值
         shuffle_list = sorted(expected_list, key=lambda t: t.value)
         self.assertEqual(shuffle_list, list(reversed(expected_list)))
 
     def test_sum(self):
-        _list = [1, 2, 3, 4, 5]
+        """
+        sum(seque) 返回一个序列所有元素的总和
+        """
+        l = [1, 2, 3, 4, 5]
         expected = 0
-        for n in _list:
+        for n in l:
             expected += n
 
-        self.assertEqual(sum(_list), expected)
-        self.assertEqual(sum(_list, 100), expected + 100)
+        self.assertEqual(sum(l), expected)
+        self.assertEqual(sum(l, 100), expected + 100)
 
     def test_super(self):
+        """
+        super() 返回当前对象的超类引用
+        super(type, obj) 返回指定类型对象的超类引用
+        """
+
         class Base:
             @property
             def mark(self):
@@ -731,7 +928,7 @@ print(x)''')
         class Grand(Child):
             @property
             def mark(self):
-                return super().mark
+                return super().mark  # 访问超类中的mark属性
 
         o = Base()
         self.assertEqual(o.mark, 'Base')
@@ -742,8 +939,13 @@ print(x)''')
 
         o = Grand()
         self.assertEqual(o.mark, 'Child')
+        self.assertEqual(super(Grand, o).mark, 'Child')
 
     def test_type(self):
+        """
+        type(obj) 获取对象的类型
+        type(type_name, super_type, attributes) 创建一个类型为type_name的对象
+        """
         self.assertEqual(type(123), int)
         self.assertEqual(type('Hello'), str)
 
@@ -752,6 +954,10 @@ print(x)''')
         self.assertEqual(t.VAL, 100)
 
     def test_vars(self):
+        """
+        getattr(obj, attr_name) 获取指定对象的一个属性值
+        """
+
         class Test:
             def __init__(self, a, b):
                 self.__a, self.__b = a, b
@@ -764,6 +970,12 @@ print(x)''')
             self.assertEqual(getattr(t, key), var[key])
 
     def test_zip(self):
+        """
+        zip(seque1, seque2) 合并两个序列
+        [a1, a2, a3] 合并 [b1, b2, b3] => [[a1, b1], [a2, b2], [a3, b3]]
+
+        zip(*zipped_seque) 分解合并后的序列
+        """
         expected_list1 = [1, 2, 3]
         expected_list2 = [4, 5, 6]
         expected_zipped = []
@@ -778,10 +990,19 @@ print(x)''')
         self.assertEqual(list(actual_list2), expected_list2)
 
     def test_new(self):
+        """
+        python 在创建对象时会先调用类的__new__方法获取对象，在调用对象的__init__方法初始化对象
+        __new__是一个类方法（@classmethod）
+        """
+
         class Singleton:
+            """
+            利用__new__方法完成类的单例模式
+            """
+
             def __new__(cls, *args, **kwargs):
-                if not hasattr(cls, "_instance"):
-                    cls._instance = super().__new__(cls)
+                if not hasattr(cls, "_instance"):  # 判断类属性中是否有单例存在
+                    cls._instance = super().__new__(cls)  # 获取单例对象，保存在类属性中
                 return cls._instance
 
             def __init__(self, value):
@@ -795,112 +1016,3 @@ print(x)''')
         singleton2 = Singleton(200)
         self.assertEqual(singleton2.value, 200)
         self.assertEqual(singleton1, singleton2)
-
-    def test_yield(self):
-        def xrange(start, stop, step):
-            while start < stop:
-                yield start
-                start += step
-
-        t = tuple(x for x in xrange(1, 10, 2))
-        self.assertEqual(t, tuple(range(1, 10, 2)))
-
-    def test_list_args(self):
-        def tuple_args(*args):
-            return args
-
-        expected_list = (1, 2, 3, 4, 5)
-        self.assertEqual(tuple_args(1, 2, 3, 4, 5), expected_list)
-        self.assertEqual(tuple_args(*expected_list), expected_list)
-
-    def test_map_args(self):
-        def dict_args(**kwargs):
-            return kwargs
-
-        def list_dict_args(**kwargs):
-            return sorted(kwargs.keys()), sorted(kwargs.values())
-
-        expected_map = {'a': 1, 'b': 2, 'c': 3}
-        actual_map = dict_args(a=1, b=2, c=3)
-        self.assertDictEqual(expected_map, actual_map)
-
-        list_key, list_value = list_dict_args(**expected_map)
-        self.assertEqual(list_key, ['a', 'b', 'c'])
-        self.assertEqual(list_value, [1, 2, 3])
-
-    def test_global_var(self):
-        global TEST_VAR
-        self.assertEqual(TEST_VAR, 'GLOBAL')
-
-        TEST_VAR = 'LOCAL'
-        self.assertEqual(TEST_VAR, 'LOCAL')
-        self.assertEqual(TEST_VAR, 'LOCAL')
-
-    @staticmethod
-    def outside(x):
-        def inside(y):
-            nonlocal x
-            return x, y
-
-        return inside
-
-    def test_nested_function(self):
-        func = TestBuildInFunctions.outside(10)
-        x, y = func(20)
-        self.assertEqual(x, 10)
-        self.assertEqual(y, 20)
-
-    def test_with(self):
-        class Test:
-            def __init__(self):
-                self.__count = 0
-
-            @property
-            def count(self):
-                return self.__count
-
-            def __enter__(self):
-                self.__count += 1
-
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                self.__count -= 1
-                self.__exception_type = exc_type
-                self.__exception = exc_val
-                self.__traceback = exc_tb
-                # return True if not raise the Exception
-
-            @property
-            def exception_type(self):
-                return self.__exception_type
-
-            @property
-            def exception(self):
-                return self.__exception
-
-            @property
-            def traceback(self):
-                return self.__traceback
-
-        t = Test()
-        self.assertEqual(t.count, 0)
-        with t:
-            self.assertEqual(t.count, 1)
-        self.assertEqual(t.count, 0)
-        self.assertEqual(t.exception, None)
-        self.assertEqual(t.exception_type, None)
-        self.assertEqual(t.traceback, None)
-
-        t = Test()
-        exception = None
-        self.assertEqual(t.count, 0)
-        try:
-            with t:
-                self.assertEqual(t.count, 1)
-                raise Exception
-        except Exception as e:
-            exception = e
-        finally:
-            self.assertEqual(t.count, 0)
-            self.assertEqual(t.exception, exception)
-            self.assertEqual(t.exception_type, Exception)
-            self.assertIsNotNone(t.traceback)
