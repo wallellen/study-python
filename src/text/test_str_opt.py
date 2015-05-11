@@ -1,7 +1,10 @@
 # coding=utf-8
+from functools import reduce
+import operator
 
 from unittest import TestCase
 import io
+import re
 
 
 class TestStringOpt(TestCase):
@@ -47,10 +50,22 @@ class TestStringOpt(TestCase):
         self.assertTupleEqual(tuple1, tuple2)
 
     def test_string_connect(self):
-        str1 = 'Hello '
+        """
+        字符串连接有如下方法：
+        1. 利用‘+’运算符
+        2. 利用 str::join(str_list) 方法
+        3. 利用字符串格式化
+        4. 利用其它集合操作方法（如 reduce 方法）
+
+        字符串的‘*’运算符表示字符串重复的次数
+        'abc' * 3 的结果为'abcabcabc'
+        """
+        str1 = 'Hello'
         str2 = 'World'
-        str3 = 'Hello World'
-        self.assertEqual(str3, str1 + str2)
+        self.assertEqual(str1 + ' ' + str2, 'Hello World')
+        self.assertEqual(' '.join((str1, str2)), 'Hello World')
+        self.assertEqual('%s %s' % (str1, str2), 'Hello World')
+        self.assertEqual(reduce(operator.add, (str1, ' ', str2)), "Hello World")
 
         str1 = 'xo'
         str2 = 'xoxoxoxo'
@@ -136,4 +151,87 @@ e'''
 
         self.assertEqual(s, 'Hello123')
 
+    def test_trim(self):
+        """
+        str::strip(char)    去除字符串两端的指定字符
+        str::lstrip(char)   去除字符串左边的指定字符
+        str::rstrip(char)   去除字符串右边的指定字符
+        """
+        s = '    abcd    '
+        self.assertEqual(s.strip(), 'abcd')
+        self.assertEqual(s.lstrip(' '), 'abcd    ')
+        self.assertEqual(s.rstrip(), '    abcd')
 
+    def test_reverse(self):
+        """
+        翻转字符串：
+        1. 对于任何序列对象（包括字符串），seque[::-1]表示翻转序列，所以 'abc'[::-1] 为 'cba'
+        2. 对于任何 list 集合，可以使用 reversed(list) 翻转集合
+        """
+        s = 'abcdef'
+        l = s[::-1]
+        self.assertEqual(l, 'fedcba')
+
+        l = ''.join(reversed(s))
+        self.assertEqual(l, 'fedcba')
+
+        s = 'abc def'
+        l = ' '.join([e[::-1] for e in re.split(r'\s+', s)])
+        self.assertEqual(l, 'cba fed')
+
+    def test_translate(self):
+        """
+        str::translate(dict) 方法根据一个字符编码对应表，将字符串中指定的编码替换为目标编码
+        str::maketrans(str1, str2) 方法返回一个dict对象，即str1中的每个字符对应str2的每个字符，用于translate方法
+        """
+
+        def to_lower1(s):
+            # 字符编码对应表，将大写字母的编码对应到小写字母编码上
+            tab = {ord('A'): ord('a'), ord('B'): ord('b'), ord('C'): ord('c')}
+            # 执行转换，相当于将大写字母转为小写字母
+            return s.translate(tab)
+
+        s = 'ABC'
+        self.assertEqual(to_lower1(s), 'abc')
+
+        def to_lower2(s):
+            # 字符编码对应表，将大写字母的编码对应到小写字母编码上
+            tab = str.maketrans('ABCD', 'abcd')
+            # 执行转换，相当于将大写字母转为小写字母
+            return s.translate(tab)
+
+        s = 'ABC'
+        self.assertEqual(to_lower2(s), 'abc')
+
+    def test_substring(self):
+        """
+        求子字符串，分割字符串
+        1. list 方法可以将字符串分割为每字符串一个字符的子字符串集合
+        2. 切片方法可以获取指定范围的子字符串
+        3. LC切片法可以获取更复杂的子字符串集合
+        """
+        s = '一二三四五六七八九零'
+
+        # 将字符串转为每字符串一个字符的集合
+        chars = list(s)
+        self.assertEqual(len(chars), len(s))
+        self.assertEqual(chars[0], s[0])
+        self.assertEqual(chars[-1], s[-1])
+
+        self.assertEqual(s[1:5], '二三四五')  # 利用切片法获取指定范围的子字符串
+
+        fivers = [s[k:k + 2] for k in range(0, len(s), 2)]  # 利用LC切片发获取每字符串两个字符的集合
+        self.assertEqual(fivers[0], '一二')
+        self.assertEqual(fivers[1], '三四')
+        self.assertEqual(fivers[2], '五六')
+        self.assertEqual(fivers[3], '七八')
+        self.assertEqual(fivers[4], '九零')
+
+        cuts = [2, 5, 9]
+        zipped = list(zip([0] + cuts, cuts + [len(s)]))
+        self.assertListEqual(zipped, [(0, 2), (2, 5), (5, 9), (9, 10)])
+        fivers = [s[i:j] for i, j in zipped]
+        self.assertEqual(fivers[0], '一二')
+        self.assertEqual(fivers[1], '三四五')
+        self.assertEqual(fivers[2], '六七八九')
+        self.assertEqual(fivers[3], '零')

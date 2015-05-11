@@ -4,6 +4,7 @@ from unittest import TestCase
 
 
 class TestStringFormat(TestCase):
+
     def test_builtin_format(self):
         result = '%s, %s, %s' % ('a', 'b', 'c')
         self.assertEqual(result, 'a, b, c')

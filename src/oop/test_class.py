@@ -10,59 +10,63 @@ class TestClass(TestCase):
         利用:
                 class Name(Supper):
                     ...
-            
+        或
+                class Name:
+                    ...
+        声明一个Python类，前者显式声明了超类，后者则是从object类继承
+
         """
 
         class A:
-            def __init__(self, value):
+            def __init__(self, value):  # 构造器方法
                 self.value = value
 
-            def __str__(self):
+            def __str__(self):  # 对象转字符串
                 return str(self.value)
 
-            def __add__(self, other):
+            def __add__(self, other):  # 对象的加号运算符
                 if isinstance(other, A):
                     return A(self.value + other.value)
                 elif isinstance(other, int) or isinstance(other, float):
                     return A(self.value + other)
                 raise TypeError()
 
-            def __sub__(self, other):
+            def __sub__(self, other):  # 对象的减号运算符
                 if isinstance(other, A):
                     return A(self.value - other.value)
                 elif isinstance(other, int) or isinstance(other, float):
                     return A(self.value - other)
                 raise TypeError()
 
-            def __int__(self):
+            def __int__(self):  # int(obj) 相关运算符
                 return int(self.value)
 
-            def __float__(self):
+            def __float__(self):  # float(obj) 相关运算符
                 return float(self.value)
 
-            def __cmp__(self, other):
+            def __cmp__(self, other):  # 比较两个对象
                 if isinstance(other, A):
                     return self.value - other.value
                 elif isinstance(other, int) or isinstance(other, float):
                     return self.value - other
                 raise TypeError()
 
-            def __le__(self, other):
+            def __le__(self, other):  # 小于等于运算符
                 return self.__cmp__(other) <= 0
 
-            def __lt__(self, other):
+            def __lt__(self, other):  # 小于运算符
                 return self.__cmp__(other) < 0
 
-            def __ge__(self, other):
+            def __ge__(self, other):  # 大于等于运算符
                 return not self.__lt__()
 
-            def __gt__(self, other):
+            def __gt__(self, other):  # 大于运算符
                 return not self.__le__(other)
 
-            def __eq__(self, other):
+            def __eq__(self, other):  # 等于运算符
                 return self.__cmp__(other) == 0
 
-            def get_value(self):
+            def get_value(self):  # 类方法
                 return self.value
 
         a = A(100)
@@ -204,3 +208,25 @@ class TestClass(TestCase):
             B1().value()
 
         self.assertEqual(B2().value(), 100)
+
+    def test_slots_and_attributes(self):
+        """
+        类的 __slots__ 成员表示类中可以包含的成员变量名称
+        """
+
+        class A1:
+            pass
+
+        class A2:
+            __slots__ = ['age', 'name']
+
+        a = A1()
+        a.age = 10
+        a.name = 'Alvin'
+        a.gender = 'M'
+
+        a = A2()
+        a.age = 10
+        a.name = 'Alvin'
+        with self.assertRaises(AttributeError):
+            a.gender = 'M'
