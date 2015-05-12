@@ -357,6 +357,9 @@ class TestDecorators(TestCase):
             被注解方法的第一个参数一定是其当前对象实例；
         """
 
+        class EmptyError(Exception):
+            pass
+
         def not_empty(func):
             def wrapper(this, *args):
                 """
@@ -365,7 +368,7 @@ class TestDecorators(TestCase):
                 for arg in args:
                     if isinstance(arg, str):
                         if arg is None or len(arg) == 0:
-                            raise Exception()
+                            raise EmptyError()
                 return func(this, *args)
 
             return wrapper
@@ -379,7 +382,7 @@ class TestDecorators(TestCase):
         self.assertTrue(a.test('Alvin'))
         self.assertTrue(a.test(None))
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(EmptyError):
             a.test('')
 
 
