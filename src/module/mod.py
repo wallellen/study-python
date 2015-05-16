@@ -16,4 +16,5 @@ class Mod:
         return self.__a
 
 
+# noinspection PyUnboundLocalVariable
 count = count + 1 if 'count' in dir() else 0

@@ -1,8 +1,9 @@
 # coding=utf-8
+import os
 
-import importlib
 from unittest import TestCase
 
+# for py3
 from module import mod
 
 
@@ -27,11 +28,21 @@ class TestModule(TestCase):
         mod2 = mod.Mod(200)
         self.assertEqual(mod2.a, 200)
 
-    def test_reload_module(self):
+    def test_reload_module_py2(self):
+        self.assertEqual(mod.count, 0)
+
+        reload(mod)
+        self.assertEqual(mod.count, 1)
+
+    '''
+    @skip('only for py3')
+    def test_reload_module_py3(self):
         self.assertEqual(mod.count, 0)
 
         importlib.reload(mod)
         self.assertEqual(mod.count, 1)
+    '''
 
     def test_exec_module(self):
-        exec(open('mod.py').read())     # load module
+        path = os.path.split(os.path.realpath(__file__))[0]
+        exec open(os.path.join(path, 'mod.py')).read()  # load module

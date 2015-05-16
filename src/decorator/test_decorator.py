@@ -39,7 +39,68 @@ class TestDecorators(TestCase):
 
         self.assertEqual(demo(), {'wrapped': True, 'result': 'demo worked'})
 
-    def test_decorator_with_arguments(self):
+    def test_decorator_with_arguments_py2(self):
+        """
+        为注解添加参数：
+            注解函数本身只能拥有一个参数，即被注解函数本身，如果要在注解时传入其它参数，则必须通过闭包的方式
+        1. 定义任意参数函数A
+        2. A函数返回标准注解函数B
+        3. B函数中包含被注解方法的代理
+        """
+
+        # 定义带有任意参数函数
+        def html_tag(tag_name, **kwargs):
+            # 定义注解函数并返回该函数
+            def decorator(func):
+                # 定义被注解函数代理函数并返回该函数
+                def wrapper():
+                    sio = io.StringIO()
+                    sio.write(u'<')
+                    sio.write(unicode(tag_name))
+                    for key in sorted(kwargs.keys()):
+                        sio.write(u' ')
+                        sio.write(u'class' if key == u'clazz' else unicode(key))
+                        value = kwargs[key]
+                        if value.find(u'\"') < 0:
+                            sio.write(u'=\"')
+                            sio.write(unicode(value))
+                            sio.write(u'\"')
+                        else:
+                            sio.write(u'=\'')
+                            sio.write(unicode(value))
+                            sio.write(u'\'')
+                    nested = func()  # 调用被注解方法
+                    if len(nested) == 0:
+                        sio.write(u'/>')
+                    else:
+                        sio.write(u'>')
+                        sio.write(unicode(nested))
+                        sio.write(u'</')
+                        sio.write(unicode(tag_name))
+                        sio.write(u'>')
+                    sio.seek(0)
+                    return sio.read()
+
+                return wrapper
+
+            return decorator
+
+        # 调用函数并传入参数，返回注解函数
+        @html_tag(tag_name='div', style='display:block', clazz='col-md-2')
+        def demo1():
+            return 'Hello'
+
+        self.assertEqual(demo1(), '<div class="col-md-2" style="display:block">Hello</div>')
+
+        @html_tag(tag_name='div', click='alter(\"ok\")')
+        def demo2():
+            return ''
+
+        self.assertEqual(demo2(), '<div click=\'alter("ok")\'/>')
+
+    '''
+    @skip('only for py3')
+    def test_decorator_with_arguments_py3(self):
         """
         为注解添加参数：
             注解函数本身只能拥有一个参数，即被注解函数本身，如果要在注解时传入其它参数，则必须通过闭包的方式
@@ -97,8 +158,72 @@ class TestDecorators(TestCase):
             return ''
 
         self.assertEqual(demo2(), '<div click=\'alter("ok")\'/>')
+    '''
 
-    def test_decorator_with_callback_instance(self):
+    def test_decorator_with_callback_instance_py2(self):
+        """
+        利用callable对象实现注解
+            如果一个对象的类包含__call__方法，则该对象可以看作为函数使用，如果其参数为函数类型，
+        则该对象可以作为注解使用
+            对象作为注解的优势在于：1。可以通过构造器传递参数；2. 可以在对象中保持状态；
+        """
+
+        class HtmlTag:
+            def __init__(self, tag_name, **kwargs):
+                self.__kwargs = kwargs
+                self.__tag_name = tag_name
+
+            def __call__(self, callback):
+                """
+                    该方法可以令对象看作为一个函数，该方法返回一个代理方法
+                """
+
+                def wrapper():
+                    sio = io.StringIO()
+                    sio.write(u'<')
+                    sio.write(unicode(self.__tag_name))
+                    for key in sorted(self.__kwargs):
+                        sio.write(u' ')
+                        sio.write(u'class' if key == 'clazz' else unicode(key))
+                        value = str(self.__kwargs[key])
+                        if value.find(u'\"') < 0:
+                            sio.write(u'=\"')
+                            sio.write(unicode(value))
+                            sio.write(u'\"')
+                        else:
+                            sio.write(u'=\'')
+                            sio.write(unicode(value))
+                            sio.write(u'\'')
+                    nested = callback()  # 调用被注解方法
+                    if len(nested) == 0:
+                        sio.write(u'/>')
+                    else:
+                        sio.write(u'>')
+                        sio.write(unicode(nested))
+                        sio.write(u'</')
+                        sio.write(unicode(self.__tag_name))
+                        sio.write(u'>')
+                    sio.seek(0)
+                    return sio.read()
+
+                return wrapper
+
+        # 调用构造器构造对象，将其__call__方法作为注解方法使用
+        @HtmlTag(tag_name='div', style='display:block', clazz='col-md-2')
+        def demo1():
+            return 'Hello'
+
+        self.assertEqual(demo1(), '<div class="col-md-2" style="display:block">Hello</div>')
+
+        @HtmlTag(tag_name='div', click='alter(\"ok\")')
+        def demo2():
+            return ''
+
+        self.assertEqual(demo2(), '<div click=\'alter("ok")\'/>')
+
+    '''
+    @skip('only for py3')
+    def test_decorator_with_callback_instance_py3(self):
         """
         利用callable对象实现注解
             如果一个对象的类包含__call__方法，则该对象可以看作为函数使用，如果其参数为函数类型，
@@ -158,6 +283,7 @@ class TestDecorators(TestCase):
             return ''
 
         self.assertEqual(demo2(), '<div click=\'alter("ok")\'/>')
+    '''
 
     def test_decorator_modify_arguments1(self):
         """
@@ -305,7 +431,55 @@ class TestDecorators(TestCase):
         with self.assertRaises(Exception):
             app.execute('/prev')
 
-    def test_use_log(self):
+    def test_use_log_py2(self):
+        """
+        利用注解，可以以非侵入式代码完成“切面”式编程
+        """
+
+        # noinspection PyShadowingNames
+        class Logger:
+            def __init__(self):
+                self.__io = io.StringIO()
+
+            def __call__(self, fn):
+                @functools.wraps(fn)
+                def wrapper(*args, **kwargs):   # 代理方法，在调用被注解方法前后产生日志
+                    start_time = time.time()
+                    result = fn(*args, **kwargs)
+                    end_time = time.time()
+                    self.__io.write(u'function={:}\n'.format(fn.__name__))
+                    self.__io.write(u'arguments={:} {:}\n'.format(args, kwargs))
+                    self.__io.write(u'return={:}\n'.format(result))
+                    self.__io.write(u'time={:.2f} sec'.format(end_time - start_time))
+                    return result
+
+                return wrapper
+
+            def reset(self):
+                self.__io.seek(0)
+
+            def readline(self):
+                return self.__io.readline()
+
+        logger = Logger()
+
+        @logger
+        def multiply(x, y):
+            return x * y
+
+        start_time = time.time()
+        multiply(10, 20)
+        end_time = time.time()
+
+        logger.reset()
+        self.assertEqual(logger.readline(), 'function=multiply\n')
+        self.assertEqual(logger.readline(), 'arguments=(10, 20) {}\n')
+        self.assertEqual(logger.readline(), 'return=200\n')
+        self.assertEqual(logger.readline(), 'time={:.2f} sec'.format(end_time - start_time))
+
+    '''
+    @skip('only for py3')
+    def test_use_log_py3(self):
         """
         利用注解，可以以非侵入式代码完成“切面”式编程
         """
@@ -350,8 +524,46 @@ class TestDecorators(TestCase):
         self.assertEqual(logger.readline(), 'arguments=(10, 20) {}\n')
         self.assertEqual(logger.readline(), 'return=200\n')
         self.assertEqual(logger.readline(), 'time={:.2f} sec'.format(end_time - start_time))
+    '''
 
-    def test_wrapper_class_method(self):
+    def test_wrapper_class_method_py2(self):
+        """
+        如果要为类的方法设计注解函数，只需注意：
+            被注解方法的第一个参数一定是其当前对象实例；
+        """
+
+        class EmptyError(Exception):
+            pass
+
+        def not_empty(func):
+            def wrapper(this, *args):
+                """
+                代理函数的第一个参数固定为被注解方法的当前对象实例，通过这个参数可以访问到被注解方法所属的对象
+                """
+                for arg in args:
+                    if isinstance(arg, str):
+                        if arg is None or len(arg) == 0:
+                            raise EmptyError()
+                return func(this, *args)
+
+            return wrapper
+
+        # noinspection PyUnusedLocal
+        class A(object):
+            @not_empty
+            def test(self, name):
+                return True
+
+        a = A()
+        self.assertTrue(a.test('Alvin'))
+        self.assertTrue(a.test(None))
+
+        with self.assertRaises(EmptyError):
+            a.test('')
+
+    '''
+    @skip('only for py3')
+    def test_wrapper_class_method_py3(self):
         """
         如果要为类的方法设计注解函数，只需注意：
             被注解方法的第一个参数一定是其当前对象实例；
@@ -384,7 +596,7 @@ class TestDecorators(TestCase):
 
         with self.assertRaises(EmptyError):
             a.test('')
-
+    '''
 
 
 

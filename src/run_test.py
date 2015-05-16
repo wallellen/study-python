@@ -2,6 +2,7 @@
 
 import os
 import unittest
+import sys
 
 
 def list_packages():
@@ -13,13 +14,17 @@ def list_packages():
 
 
 def main():
+    success = True
     for test_dir in list_packages():
         test_suite = unittest.TestLoader().discover(test_dir)
-        unittest.TextTestRunner(verbosity=1).run(test_suite)
+        result = unittest.TextTestRunner(verbosity=1).run(test_suite)
+        if len(result.failures) > 0:
+            success = False
+    return 0 if success else 1
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
 
 '''
 def main(*args):

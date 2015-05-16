@@ -30,28 +30,28 @@ class TestStringOpt(TestCase):
         string[x:y:z] 可以获取字符串的‘切片’（子字符串），x为起始下标，y为终止下标（< y），z为步长
         动态的改变'x,y,z'的值可以产生所谓‘LC切片’，以获得更为复杂的切片结果
         """
-        s = '一二三四五六七八九零'
-        self.assertEqual(s[1:4], '二三四')  # 利用切片法获取指定范围的子字符串
-        self.assertEqual(s[2:], '三四五六七八九零')
-        self.assertEqual(s[:3], '一二三')
-        self.assertEqual(s[-4:], '七八九零')
-        self.assertEqual(s[1:-1:2], '二四六八')
+        s = u'一二三四五六七八九零'
+        self.assertEqual(s[1:4], u'二三四')  # 利用切片法获取指定范围的子字符串
+        self.assertEqual(s[2:], u'三四五六七八九零')
+        self.assertEqual(s[:3], u'一二三')
+        self.assertEqual(s[-4:], u'七八九零')
+        self.assertEqual(s[1:-1:2], u'二四六八')
 
         fivers = [s[k:k + 2] for k in range(0, len(s), 2)]  # 利用LC切片发获取每字符串两个字符的集合
-        self.assertEqual(fivers[0], '一二')
-        self.assertEqual(fivers[1], '三四')
-        self.assertEqual(fivers[2], '五六')
-        self.assertEqual(fivers[3], '七八')
-        self.assertEqual(fivers[4], '九零')
+        self.assertEqual(fivers[0], u'一二')
+        self.assertEqual(fivers[1], u'三四')
+        self.assertEqual(fivers[2], u'五六')
+        self.assertEqual(fivers[3], u'七八')
+        self.assertEqual(fivers[4], u'九零')
 
         cuts = [2, 5, 9]
         zipped = list(zip([0] + cuts, cuts + [len(s)]))
         self.assertListEqual(zipped, [(0, 2), (2, 5), (5, 9), (9, 10)])
         fivers = [s[i:j] for i, j in zipped]
-        self.assertEqual(fivers[0], '一二')
-        self.assertEqual(fivers[1], '三四五')
-        self.assertEqual(fivers[2], '六七八九')
-        self.assertEqual(fivers[3], '零')
+        self.assertEqual(fivers[0], u'一二')
+        self.assertEqual(fivers[1], u'三四五')
+        self.assertEqual(fivers[2], u'六七八九')
+        self.assertEqual(fivers[3], u'零')
 
     def test_string_iterator(self):
         """
@@ -90,7 +90,33 @@ class TestStringOpt(TestCase):
         tuple2 = ('A', 'B', 'C', 'D', 'E', 'F', 'G')
         self.assertTupleEqual(tuple1, tuple2)
 
-    def test_string_connect(self):
+    def test_string_connect_py2(self):
+        """
+        字符串连接有如下方法：
+        1. 利用‘+’运算符
+        2. 利用 str::join(str_list) 方法
+        3. 利用字符串格式化
+        4. 利用其它集合操作方法（如 reduce 方法）
+        5. 通过‘StringIO’对象连接字符串
+        """
+        str1 = 'Hello'
+        str2 = 'World'
+        self.assertEqual(str1 + ' ' + str2, 'Hello World')
+        self.assertEqual(' '.join((str1, str2)), 'Hello World')
+        self.assertEqual('%s %s' % (str1, str2), 'Hello World')
+        self.assertEqual(reduce(operator.add, (str1, ' ', str2)), "Hello World")
+
+        # 利用‘StringIO’开辟内存缓冲区来高效连接字符串
+        with io.StringIO() as sio:
+            sio.write(u'Hello')
+            sio.writelines((u'1', u'2', u'3'))
+            sio.seek(0)
+            s = sio.read()
+        self.assertEqual(s, 'Hello123')
+
+    '''
+    @skip('only for py3')
+    def test_string_connect_py3(self):
         """
         字符串连接有如下方法：
         1. 利用‘+’运算符
@@ -113,6 +139,7 @@ class TestStringOpt(TestCase):
             sio.seek(0)
             s = sio.read()
         self.assertEqual(s, 'Hello123')
+    '''
 
     def test_string_multi(self):
         """
@@ -255,26 +282,66 @@ e'''
         l = ' '.join([e[::-1] for e in s.split(' ')])  # 将字符串切分为子字符串后逐一翻转
         self.assertEqual(l, 'cba fed')
 
-    def test_translate(self):
+    def test_translate_py2(self):
         """
         str::translate(dict) 方法根据一个字符编码对应表，将字符串中指定的编码替换为目标编码
         str::maketrans(str1, str2) 方法返回一个dict对象，即str1中的每个字符对应str2的每个字符，用于translate方法
         """
 
-        def to_lower1(s):
+        def to_lower(_s):
+            # 字符编码对应表，将大写字母的编码对应到小写字母编码上
+            tab = string.maketrans('ABCD', 'abcd')
+            # 执行转换，相当于将大写字母转为小写字母
+            return _s.translate(tab)
+
+        s = 'ABC'
+        self.assertEqual(to_lower(s), 'abc')
+
+        def translator(frm='', to='', delete='', keep=None):
+            """
+            返回一个字符串转换方法， 该方法可以将字符串中指定的字符集转换为另一种字符集，或删除（保留）指定字符集对应的字符
+            :arg frm 需要被转换的字符集
+            :arg to 要转换成的字符集
+            :arg delete 要删除的字符集
+            :arg keep 要保留的字符集
+            """
+            if len(to) == 1:
+                to *= len(frm)
+            trans = string.maketrans(frm, to)
+            if keep is not None:
+                allchars = string.maketrans('', '')
+                delete = allchars.translate(allchars, keep.translate(allchars, delete))
+
+            def translate(s):
+                return s.translate(trans, delete)
+
+            return translate
+
+        digits_only = translator(frm=string.digits, to='?')
+        self.assertEqual(digits_only('a1b2c3'), 'a?b?c?')
+
+        digits_only = translator(delete=string.digits)
+        self.assertEqual(digits_only('a1b2c3'), 'abc')
+
+        digits_only = translator(keep='45')
+        self.assertEqual(digits_only('123456'), '45')
+
+    '''
+    @skip('only for 3')
+    def test_translate_py3(self):
+        """
+        str::translate(dict) 方法根据一个字符编码对应表，将字符串中指定的编码替换为目标编码
+        str::maketrans(str1, str2) 方法返回一个dict对象，即str1中的每个字符对应str2的每个字符，用于translate方法
+        """
+        def to_lower(_s):
             # 字符编码对应表，将大写字母的编码对应到小写字母编码上
             tab = {ord('A'): ord('a'), ord('B'): ord('b'), ord('C'): ord('c')}
             # 执行转换，相当于将大写字母转为小写字母
-            return s.translate(tab)
+            return _s.translate(tab)
 
         s = 'ABC'
-        self.assertEqual(to_lower1(s), 'abc')
+        self.assertEqual(to_lower(s), 'abc')
 
-        def to_lower2(s):
-            # 字符编码对应表，将大写字母的编码对应到小写字母编码上
-            tab = str.maketrans('ABCD', 'abcd')
-            # 执行转换，相当于将大写字母转为小写字母
-            return s.translate(tab)
-
-        s = 'ABC'
-        self.assertEqual(to_lower2(s), 'abc')
+        tab = str.maketrans('ABC', 'abc')
+        self.assertEqual(s.translate(tab), 'abc')
+    '''

@@ -1,6 +1,6 @@
 # coding=utf-8
 import random
-from unittest import TestCase
+from unittest import TestCase, skip
 
 TEST_VAR = 'GLOBAL'
 
@@ -153,13 +153,24 @@ World"""
         str2 = 'Hello\nWorld'
         self.assertNotEqual(str1, str2)
 
-    def test_unicode_string(self):
+    '''
+    @skip('only for 3')
+    def test_unicode_string_py3(self):
         """
         u（或U）表示字符串中包含UNICODE字符
         """
         str1 = u'测试'
         str2 = '测试'
         self.assertEqual(str1, str2)
+    '''
+
+    def test_unicode_string_py2(self):
+        """
+        u（或U）表示字符串中包含UNICODE字符
+        """
+        str1 = u'测试'
+        str2 = '测试'
+        self.assertNotEqual(str1, str2)
 
     def test_exception(self):
         """
@@ -198,23 +209,14 @@ World"""
             所以一般情况下，yield关键字位于一个循环内部，通过某种规则来产生迭代中的某个值
         """
 
-        def xrange(min, max):
+        def srange(min, max):
             while min < max:
                 yield min
                 min += 1
 
-        self.assertListEqual(list(xrange(10, 20)), list(range(10, 20)))
+        self.assertListEqual(list(srange(10, 20)), list(range(10, 20)))
 
-        it = xrange(10, 20).__iter__()
-        n = 10
-        try:
-            while True:
-                self.assertEqual(n, it.__next__())
-                n += 1
-        except StopIteration:
-            pass
-
-        it = iter(xrange(10, 20))
+        it = iter(srange(10, 20))
         n = 10
         try:
             while it:
@@ -292,11 +294,13 @@ World"""
         TEST_VAR = 'LOCAL'
         self.assertEqual(TEST_VAR, 'LOCAL')
 
+    '''
     @staticmethod
-    def outside(x):
+    def outside_py3(x):
         def inside(y):
             """
-            nonlocal 关键字指定某个变量非当前函数（方法）的局部变量
+            python3 在闭包中无法直接改变外部变量值（只读），
+            如果需要改变，则需要用 nonlocal 在闭包中修饰外部变量
             """
             nonlocal x
             x += 1
@@ -304,11 +308,39 @@ World"""
 
         return inside
 
-    def test_nested_function(self):
+    @skip('only for 3')
+    def test_nested_function_py3(self):
         """
         nonlocal 关键字，参考 outside 方法
         """
-        func = TestGrammar.outside(10)
+        func = TestGrammar.outside_py3(10)
+        x, y = func(20)
+        self.assertEqual(x, 11)
+        self.assertEqual(y, 20)
+
+        x, y = func(20)
+        self.assertEqual(x, 12)
+        self.assertEqual(y, 20)
+    '''
+
+    @staticmethod
+    def outside_py2(x):
+        x = [x]
+
+        def inside(y):
+            """
+            python2 在闭包中无法改变外部变量值（只读），但可以改变变量引用的对象本身
+            """
+            x[0] += 1
+            return x[0], y
+
+        return inside
+
+    def test_nested_function_py2(self):
+        """
+        nonlocal 关键字，参考 outside 方法
+        """
+        func = TestGrammar.outside_py2(10)
         x, y = func(20)
         self.assertEqual(x, 11)
         self.assertEqual(y, 20)

@@ -15,6 +15,8 @@ class TestBuildInFunctions(TestCase):
     def assertListContains(self, list_res, list_to):
         """
         检测一个list集合是否完全包含另一个list集合
+        :type list_res: list
+        :type list_to: list
         :param list_res: 假定包含另一个list集合的集合
         :param list_to: 假定被包含的list集合
         :return: 如果条件成立则返回True，否则引发断言
@@ -60,6 +62,8 @@ class TestBuildInFunctions(TestCase):
         _list = (0, 0, 0, 0, 0)  # 全部值都表示False的情况
         self.assertFalse(any(_list))
 
+    ''' only for py3
+    @skip('only for py3')
     def test_ascii(self):
         """
         字符串字符转为ASCII编码，结果中以\\u开头表示UNICODE编码
@@ -67,6 +71,7 @@ class TestBuildInFunctions(TestCase):
         ascii(str)->string  this string contain
         """
         self.assertEqual(ascii('测试'), "'\\u6d4b\\u8bd5'")
+    '''
 
     def test_bin(self):
         """
@@ -83,7 +88,7 @@ class TestBuildInFunctions(TestCase):
         self.assertEqual(bool(0), False)
         self.assertEqual(bool('x'), True)
 
-    def test_byte_and_bytearray(self):
+    def test_byte_and_bytearray_py2(self):
         """
         通过bytearray函数，将字符串按照制定编码转换为byte集合
         通过bytes函数，将数字集合转为byte集合
@@ -91,13 +96,54 @@ class TestBuildInFunctions(TestCase):
         通过bytearray::decode方法，可以将bytearray对象转为特定编码的字符串
         """
         expected_bytes = (72, 101, 108, 108, 111, 32, 112, 121, 116, 104, 111, 110)
-        ba = bytearray('Hello python', 'utf-8')
+        ba = bytearray(u'Hello python', 'utf-8')
+        self.assertTupleEqual(tuple(ba), expected_bytes)
+
+        # compare the result
+        self.assertEqual(bytearray(expected_bytes).decode('utf-8'), ba.decode('utf-8'))
+
+    '''
+    @skip('only for py3')
+    def test_byte_and_bytearray_py3(self):
+        """
+        通过bytearray函数，将字符串按照制定编码转换为byte集合
+        通过bytes函数，将数字集合转为byte集合
+        通过str函数将比特集合转为制定编码的字符串
+        通过bytearray::decode方法，可以将bytearray对象转为特定编码的字符串
+        """
+        expected_bytes = (72, 101, 108, 108, 111, 32, 112, 121, 116, 104, 111, 110)
+        ba = bytearray(u'Hello python', 'utf-8')
         self.assertTupleEqual(tuple(ba), expected_bytes)
 
         # compare the result
         self.assertEqual(str(bytes(expected_bytes), 'utf-8'), ba.decode('utf-8'))
+    '''
 
-    def test_callable(self):
+    def test_callable_py2(self):
+        """
+        如果一个类中包含__call__方法，则该类的对象可以以类似于函数方式使用
+        callable函数可以检测一个对象是否包含__call__方法
+        """
+
+        class NotCallable(object):
+            pass
+
+        class Callable(object):
+            def __call__(self, *args, **kwargs):
+                return 'callable,' + str(args[0]) + ',' + kwargs['name']
+
+        a = NotCallable()
+        self.assertFalse(callable(a))  # 不包含__call__方法的对象
+
+        a = Callable()
+        self.assertTrue(callable(a))  # 包含__call__方法的对象
+
+        # 通过对象调用__call__方法，就如同对象是一个方法
+        self.assertEqual(a(100, name='alvin'), 'callable,100,alvin')
+
+    '''
+    @skip('only for py3')
+    def test_callable_py3(self):
         """
         如果一个类中包含__call__方法，则该类的对象可以以类似于函数方式使用
         callable函数可以检测一个对象是否包含__call__方法
@@ -118,6 +164,7 @@ class TestBuildInFunctions(TestCase):
 
         # 通过对象调用__call__方法，就如同对象是一个方法
         self.assertEqual(a(100, name='alvin'), 'callable,100,alvin')
+    '''
 
     def test_chr(self):
         """
@@ -125,7 +172,25 @@ class TestBuildInFunctions(TestCase):
         """
         self.assertEqual(chr(97), 'a')
 
-    def test_classmethod(self):
+    def test_classmethod_py2(self):
+        """
+        classmethod注解表示一个方法的归属是类，而非对象，具体区别在于：
+            方法的第一个参数指向所属的类，而非一个对象实例
+        """
+
+        class ClassMethod(object):
+            value = 0
+
+            @classmethod
+            def method(cls, num):  # 类方法、对象方法和静态方法的区别就在于第一个参数
+                return str(num) + ' ' + str(cls.value)
+
+        ClassMethod.value = 100
+        self.assertEqual("123 100", ClassMethod.method(123))  # 访问类方法，无需借助对象
+
+    '''
+    @skip('only for py3')
+    def test_classmethod_py3(self):
         """
         classmethod注解表示一个方法的归属是类，而非对象，具体区别在于：
             方法的第一个参数指向所属的类，而非一个对象实例
@@ -140,8 +205,25 @@ class TestBuildInFunctions(TestCase):
 
         ClassMethod.value = 100
         self.assertEqual("123 100", ClassMethod.method(123))  # 访问类方法，无需借助对象
+    '''
 
-    def test_compile(self):
+    def test_compile_py2(self):
+        """
+        compile方法可以将字符串表示的python代码进行编译，从而执行
+        """
+        code = '1 + 1'  # 待编译的表达式（字符串表示）
+        compile_code = compile(code, '', 'eval')  # 将表达式进行编译，返回值指向编译结果
+        self.assertEqual(eval(compile_code), 2)  # 执行编译结果，得到返回值
+
+        code = 'x = 1 + 1'  # 待编译的语句（字符串表示）
+        compile_code = compile(code, '', 'exec')  # 将语句进行编译，返回值指向编译结果
+
+        exec compile_code  # 执行编译结果
+        self.assertEqual(eval('x'), 2)  # 执行表达式，获取x变量的值
+
+    '''
+    @skip('only for py3')
+    def test_compile_py3(self):
         """
         compile方法可以将字符串表示的python代码进行编译，从而执行
         """
@@ -152,7 +234,9 @@ class TestBuildInFunctions(TestCase):
         code = 'x = 1 + 1'  # 待编译的语句（字符串表示）
         compile_code = compile(code, '', 'exec')  # 将语句进行编译，返回值指向编译结果
         exec(compile_code)  # 执行编译结果
+
         self.assertEqual(eval('x'), 2)  # 执行表达式，获取x变量的值
+    '''
 
     def test_delattr(self):
         """
@@ -220,7 +304,31 @@ class TestBuildInFunctions(TestCase):
         _dict = dict({'a': 1, 'b': 2}, c=3)
         self.assertDictEqual(_dict, expected_dict)
 
-    def test_dir(self):
+    def test_dir_py2(self):
+        """
+        dir函数用于列举一个包、模块或对象中包含的名称（变量名，属性名，方法名等）
+        """
+
+        class Test1(object):
+            @staticmethod
+            def __dir__():
+                return ['a', 'b', 'c']
+
+        class Test2(object):
+            def __init__(self):
+                self.a = 'a'
+                self.b = 'b'
+                self.c = 'c'
+
+        t = Test1()
+        self.assertListEqual(['a', 'b', 'c'], dir(t))
+
+        t = Test2()
+        self.assertListContains(['a', 'b', 'c'], dir(t))
+
+    '''
+    @skip('only for py3')
+    def test_dir_py3(self):
         """
         dir函数用于列举一个包、模块或对象中包含的名称（变量名，属性名，方法名等）
         """
@@ -240,6 +348,7 @@ class TestBuildInFunctions(TestCase):
 
         t = Test2()
         self.assertListContains(['a', 'b', 'c'], dir(t))
+    '''
 
     def test_divmod(self):
         """
@@ -263,18 +372,28 @@ class TestBuildInFunctions(TestCase):
             self.assertEqual(num, (i, nums[i]))
             i += 1
 
-    def test_eval(self):
+    def test_eval_py2(self):
+        """
+        exec(str) 执行一个字符串表示的python表达式，并得到执行的结果
+        """
+        exec 'x = 1'
+        self.assertEqual(eval('x + 1'), 2)  # execute the express by string
+
+    '''
+    @skip('only for py3')
+    def test_eval_py3(self):
         """
         exec(str) 执行一个字符串表示的python表达式，并得到执行的结果
         """
         exec('x = 1')
         self.assertEqual(eval('x + 1'), 2)  # execute the express by string
+    '''
 
     def test_exec(self):
         """
         exec(str) 执行一段字符串表示的python代码
         """
-        exec('''x = 0
+        exec ('''x = 0
 for i in range(0, 10):
     x += 1
 y = x''')
@@ -312,7 +431,7 @@ y = x''')
 
         # 其它类型转为浮点数
         a = A(123.123)
-        self.assertEqual(type(a), A)
+        self.assertTrue(isinstance(a, A))
         self.assertEqual(type(float(a)), float)
         self.assertEqual(float(a), 123.123)
 
@@ -376,7 +495,21 @@ y = x''')
         t = Test()
         self.assertTrue(hasattr(t, 'x'))
 
-    def test_hash(self):
+    def test_hash_py2(self):
+        """
+        hash(obj) 通过对象的__hash__方法返回对象的hash值
+        """
+
+        class Test(object):
+            def __hash__(self):
+                return 1234567
+
+        t = Test()
+        self.assertEqual(hash(t), 1234567)
+
+    '''
+    @skip('only for py3')
+    def test_hash_py3(self):
         """
         hash(obj) 通过对象的__hash__方法返回对象的hash值
         """
@@ -387,6 +520,7 @@ y = x''')
 
         t = Test()
         self.assertEqual(hash(t), 1234567)
+    '''
 
     def test_hex(self):
         """
@@ -432,10 +566,26 @@ y = x''')
         self.assertFalse(isinstance(s, str))
         self.assertTrue(isinstance(s, object))
 
+    def test_issubclass_py2(self):
+        """
+        issubclass(obj, type) 用于判断一个类是否是指定类型的子类
+        """
+        self.assertTrue(issubclass(str, object))
+
+        class Base(object):
+            pass
+
+        class Child(Base):
+            pass
+
+        self.assertTrue(issubclass(Base, object))
+        self.assertTrue(issubclass(Child, Base))
+
+    '''
+    @skip('only for py3')
     def test_issubclass(self):
         """
         issubclass(obj, type) 用于判断一个类是否是指定类型的子类
-        :return:
         """
         self.assertTrue(issubclass(str, object))
 
@@ -447,8 +597,57 @@ y = x''')
 
         self.assertTrue(issubclass(Base, object))
         self.assertTrue(issubclass(Child, Base))
+    '''
 
-    def test_iter(self):
+    def test_iter_py2(self):
+        """
+        iter(obj) 方法通过指定对象的__iter__方法返回迭代器对象
+        next(iter) 方法获取一个迭代器指向的当前元素，并令迭代器指向下一个元素
+        """
+
+        class TestIterator:
+            """
+            迭代器类
+            """
+
+            def __init__(self, _cur, _max):
+                self.__cur = _cur
+                self.__max = _max
+
+            def next(self):
+                if self.__cur == self.__max:
+                    raise StopIteration()  # 如果迭代器没有下一个元素，则抛出该异常
+                _cur = self.__cur
+                self.__cur += 1
+                return _cur
+
+        class Test:
+            def __init__(self, _min, _max):
+                self.__min = _min
+                self.__max = _max
+
+            def __iter__(self):
+                return TestIterator(self.__min, self.__max)
+
+        t = Test(1, 10)
+        it = iter(t)
+        self.assertEqual(next(it), 1)
+        self.assertEqual(next(it), 2)
+
+        val = 0
+        with self.assertRaises(StopIteration):
+            while True:
+                val = next(it)
+        self.assertEqual(val, 9)
+
+        val = 1
+        for n in t:
+            self.assertEqual(n, val)
+            val += 1
+
+    '''
+    @skip('only for py3')
+    def test_iter_py3(self):
         """
         iter(obj) 方法通过指定对象的__iter__方法返回迭代器对象
         next(iter) 方法获取一个迭代器指向的当前元素，并令迭代器指向下一个元素
@@ -493,8 +692,28 @@ y = x''')
         for n in t:
             self.assertEqual(n, val)
             val += 1
+    '''
 
     def test_len(self):
+        """
+        len(obj) 通过对象的__len__方法返回一个长度值
+        """
+        s = '12345'
+        self.assertEqual(len(s), 5)
+
+        class Test(object):
+            def __init__(self, _len):
+                self.__len = _len
+
+            def __len__(self):
+                return self.__len
+
+        t = Test(10)
+        self.assertEqual(len(t), 10)
+
+    '''
+    @skip('only for py3')
+    def test_len_py3(self):
         """
         len(obj) 通过对象的__len__方法返回一个长度值
         """
@@ -510,8 +729,36 @@ y = x''')
 
         t = Test(10)
         self.assertEqual(len(t), 10)
+    '''
 
-    def test_list(self):
+    def test_list_py2(self):
+        """
+        list(iter) 将一个迭代器返回的所有元素组成一个list对象
+        """
+        self.assertListEqual(list(x if x % 2 == 0 else 0 for x in range(1, 6)), [0, 2, 0, 4, 0])
+
+        class Iterator:
+            def __init__(self, _min, _max):
+                self.__min = _min
+                self.__max = _max
+
+            def __iter__(self):
+                self.__cur = self.__min
+                return self
+
+            def next(self):
+                if self.__cur == self.__max:
+                    raise StopIteration()
+                _cur = self.__cur
+                self.__cur += 1
+                return _cur
+
+        t = Iterator(1, 6)
+        self.assertListEqual(list(t), [1, 2, 3, 4, 5])
+
+    '''
+    @skip('only for py3')
+    def test_list_py3(self):
         """
         list(iter) 将一个迭代器返回的所有元素组成一个list对象
         """
@@ -535,6 +782,7 @@ y = x''')
 
         t = Iterator(1, 6)
         self.assertListEqual(list(t), [1, 2, 3, 4, 5])
+    '''
 
     def test_locals(self):
         """
@@ -570,7 +818,26 @@ y = x''')
         res = max(1, -2, 3, 4, -5, key=functools.cmp_to_key(lambda a, b: b - a))
         self.assertEqual(res, -5)
 
-    def test_memoryview(self):
+    def test_memoryview_py2(self):
+        """
+        memoryview(buffer) 返回一个迭代器，表示一个byte缓冲对象的内存视图
+        """
+        ''' only for 3
+        memv = memoryview(b'abcde')
+        self.assertTupleEqual(tuple(memv), (97, 98, 99, 100, 101))
+
+        memv = memoryview(bytearray('abcde', 'utf-8'))
+        self.assertTupleEqual(tuple(memv), (97, 98, 99, 100, 101))
+        '''
+        memv = memoryview(b'abcde')
+        self.assertListEqual(memv.tolist(), [97, 98, 99, 100, 101])
+
+        memv = memoryview(bytearray('abcde', 'utf-8'))
+        self.assertListEqual(memv.tolist(), [97, 98, 99, 100, 101])
+
+    '''
+    @skip('only for py3')
+    def test_memoryview_py3(self):
         """
         memoryview(buffer) 返回一个迭代器，表示一个byte缓冲对象的内存视图
         """
@@ -579,6 +846,7 @@ y = x''')
 
         memv = memoryview(bytearray('abcde', 'utf-8'))
         self.assertTupleEqual(tuple(memv), (97, 98, 99, 100, 101))
+    '''
 
     def test_min(self):
         """
@@ -598,7 +866,37 @@ y = x''')
         res = min(1, -2, 3, 4, -5, key=functools.cmp_to_key(lambda a, b: b - a))
         self.assertEqual(res, 4)  # -5 % 2 = -1 => -5
 
-    def test_next(self):
+    def test_next_py2(self):
+        """
+        next(iter) 方法返回迭代器指向的当前元素，并令迭代器指向下一个元素
+        参考 test_iter 函数
+        """
+
+        class Test:
+            def __init__(self, _min, _max):
+                self.__min = _min
+                self.__max = _max
+
+            def __iter__(self):
+                self.__cur = self.__min
+                return self
+
+            def next(self):
+                if self.__cur == self.__max:
+                    raise StopIteration()
+                _cur = self.__cur
+                self.__cur += 1
+                return _cur
+
+        it = iter(Test(1, 5))
+        index = 1
+        while index < 5:
+            self.assertEqual(next(it), index)
+            index += 1
+
+    '''
+    @skip('only for py3')
+    def test_next_py3(self):
         """
         next(iter) 方法返回迭代器指向的当前元素，并令迭代器指向下一个元素
         参考 test_iter 函数
@@ -625,22 +923,72 @@ y = x''')
         while index < 5:
             self.assertEqual(next(it), index)
             index += 1
+    '''
 
-    def test_oct(self):
+    def test_oct_py2(self):
+        """
+        oct(int) 返回一个字符串，表示指定整数的8进制形式
+        """
+        o = oct(8)
+        self.assertEqual(o, '010')
+
+    '''
+    @skip('only for py3')
+    def test_oct_py3(self):
         """
         oct(int) 返回一个字符串，表示指定整数的8进制形式
         """
         o = oct(8)
         self.assertEqual(o, '0o10')
+    '''
 
-    def test_open(self):
+    def test_open_py2(self):
+        """
+        file = open(file_name, mode) 函数打开一个文件用于读写访问，返回文件对象
+        file.write(str/buffer) 写入文件
+        file.read(size) 读取文件
+        file.seek(offset) 移动文件指针
+        """
+        try:
+            # 'r'	open for reading (default)
+            # 'w'	open for writing, truncating the file first
+            # 'x'	open for exclusive creation, failing if the file already exists
+            # 'a'	open for writing, appending to the end of the file if it exists
+            # 'b'	binary mode
+            # 't'	text mode (default)
+            # '+'	open a disk file for updating (reading and writing)
+            # 'U'	universal newlines mode (deprecated)
+            with open('test.txt', 'w') as f:
+                f.writelines(('line 1\n'.decode('gbk'), 'line 2\n'.decode('gbk'), 'line 3'.decode('gbk')))
+                f.seek(0)
+                f.write('LINE'.decode('gbk'))
+
+            with open('test.txt', 'r') as f:
+                self.assertEqual(f.readline(), 'LINE 1\n')
+                self.assertEqual(f.readline(), 'line 2\n')
+                self.assertEqual(f.readline(), 'line 3')
+                self.assertEqual(f.readline(), '')  # at the end of line
+
+                f.seek(0)
+                s = 'LINE 1\nline 2\nline 3'.decode('gbk')
+                self.assertEqual(f.read(len(s)), s)
+                f.seek(0)
+
+                for c in s:
+                    self.assertEqual(f.read(1), c)
+                self.assertEqual('', f.read(1))  # at the end of line
+        finally:
+            os.remove('test.txt')
+
+    '''
+    @skip('only for py3')
+    def test_open_py3(self):
         """
         file = open(file_name, mode, encoding) 函数打开一个文件用于读写访问，返回文件对象
         file.write(str/buffer) 写入文件
         file.read(size) 读取文件
         file.seek(offset) 移动文件指针
         """
-
         try:
             # 'r'	open for reading (default)
             # 'w'	open for writing, truncating the file first
@@ -672,6 +1020,7 @@ y = x''')
                 self.assertEqual('', f.read(1))  # at the end of line
         finally:
             os.remove('test.txt')
+    '''
 
     def test_ord(self):
         """
@@ -691,7 +1040,42 @@ y = x''')
         n = pow(2, 2, 2)
         self.assertEqual(n, 2 ** 2 % 2)
 
-    def test_property(self):
+    def test_property_py2(self):
+        """
+        @property func() 注解注解一个方法，令其表示一个属性值
+        @func.setter 注解表示属性的设置方法
+        @func.getter 注解表示属性的获取方法
+        @func.deleter 注解表示属性的删除方法
+        """
+
+        class Test(object):  # 注意，一定（或间接）要从object类继承
+            def __init__(self, val):
+                self.__value = val
+
+            @property
+            def value(self):
+                return self.__value
+
+            @value.setter
+            def value(self, val):
+                self.__value = val
+
+            @value.deleter
+            def value(self):
+                del self.__value
+
+        t = Test(100)
+        self.assertEqual(t.value, 100)
+
+        t.value = 200
+        self.assertEqual(t.value, 200)
+
+        del t.value
+        self.assertFalse(hasattr(t, 'value'))
+
+    '''
+    @skip('only for py3')
+    def test_property_py3(self):
         """
         @property func() 注解注解一个方法，令其表示一个属性值
         @func.setter 注解表示属性的设置方法
@@ -722,8 +1106,8 @@ y = x''')
         self.assertEqual(t.value, 200)
 
         del t.value
-        with self.assertRaises(AttributeError):
-            self.assertEqual(t.value, 200)
+        self.assertFalse(hasattr(t, 'value'))
+    '''
 
     def test_range(self):
         """
@@ -764,7 +1148,39 @@ y = x''')
         self.assertEqual(str(t), '100')
         self.assertEqual(repr(t), 'Test:100')
 
-    def test_reversed(self):
+    def test_reversed_py2(self):
+        """
+        reversed(seque) 返回一个序列的逆序序列
+        reversed(iter) 通过迭代器对象的__reversed__获取一个反向迭代器
+        """
+        s = [1, 2, 3]
+        self.assertEqual(tuple(reversed(s)), (3, 2, 1))
+
+        class Test:
+            def __init__(self, _min, _max, _step=1):
+                self.__min, self.__max = _min, _max
+                self.__step = _step
+
+            def __iter__(self):
+                self.__cur = self.__min
+                return self
+
+            def next(self):
+                if self.__cur == self.__max:
+                    raise StopIteration()
+                cur = self.__cur
+                self.__cur += self.__step
+                return cur
+
+            def __reversed__(self):
+                return Test(self.__max - 1, self.__min - 1, -self.__step)
+
+        t = Test(1, 5)
+        self.assertEqual(tuple(reversed(t)), (4, 3, 2, 1))
+
+    '''
+    @skip('only for py3')
+    def test_reversed_py3(self):
         """
         reversed(seque) 返回一个序列的逆序序列
         reversed(iter) 通过迭代器对象的__reversed__获取一个反向迭代器
@@ -793,8 +1209,33 @@ y = x''')
 
         t = Test(1, 5)
         self.assertEqual(tuple(reversed(t)), (4, 3, 2, 1))
+    '''
 
-    def test_round(self):
+    def test_round_py2(self):
+        """
+        round(float) 返回指定小数位的浮点数，对多出的小数位进行四舍五入
+        round(obj) 通过对象的__round__方法对指定对象进行小数位保留操作
+        """
+        n = round(123.456, 2)
+        self.assertEqual(n, 123.46)
+
+        class Test(object):
+            def __init__(self, _n):
+                self.__n = _n
+
+            def __float__(self):
+                return self.__n
+
+            @property
+            def n(self):
+                return self.__n
+
+        t = Test(123.456)
+        self.assertEqual(round(t, 2), 123.46)
+
+    '''
+    @skip('only for py3')
+    def test_round_py3(self):
         """
         round(float) 返回指定小数位的浮点数，对多出的小数位进行四舍五入
         round(obj) 通过对象的__round__方法对指定对象进行小数位保留操作
@@ -815,6 +1256,7 @@ y = x''')
 
         t = Test(123.456)
         self.assertEqual(round(t, 2), 123.46)
+    '''
 
     def test_set(self):
         """
@@ -832,8 +1274,15 @@ y = x''')
         setattr(obj, attr_name, value) 用于向指定对象设置指定属性
         """
 
+        ''' only for 3
         class Test:
-            pass
+            def __init__(self):
+                self.a = 0
+        '''
+
+        class Test(object):
+            def __init__(self):
+                self.a = 0
 
         t = Test()
         setattr(t, 'a', 100)
@@ -862,7 +1311,7 @@ y = x''')
         """
         rand = Random()
         expected_list = [1, 2, 3, 4, 5]
-        shuffle_list = expected_list.copy()
+        shuffle_list = expected_list[::]
         rand.shuffle(shuffle_list)
         self.assertNotEqual(expected_list, shuffle_list)
 
@@ -909,7 +1358,40 @@ y = x''')
         self.assertEqual(sum(l), expected)
         self.assertEqual(sum(l, 100), expected + 100)
 
-    def test_super(self):
+    def test_super_py2(self):
+        """
+        super(type, obj) 返回指定类型对象的超类引用
+        """
+
+        class Base(object):
+            @property
+            def mark(self):
+                return 'Base'
+
+        class Child(Base):
+            @property
+            def mark(self):
+                return 'Child'
+
+        class Grand(Child):
+            @property
+            def mark(self):
+                return super(Grand, self).mark  # 访问超类中的mark属性
+
+        o = Base()
+        self.assertEqual(o.mark, 'Base')
+
+        o = Child()
+        self.assertEqual(o.mark, 'Child')
+        self.assertEqual(super(Child, o).mark, 'Base')
+
+        o = Grand()
+        self.assertEqual(o.mark, 'Child')
+        self.assertEqual(super(Grand, o).mark, 'Child')
+
+    '''
+    @skip('only for py3')
+    def test_super_py3(self):
         """
         super() 返回当前对象的超类引用
         super(type, obj) 返回指定类型对象的超类引用
@@ -940,6 +1422,7 @@ y = x''')
         o = Grand()
         self.assertEqual(o.mark, 'Child')
         self.assertEqual(super(Grand, o).mark, 'Child')
+    '''
 
     def test_type(self):
         """
@@ -988,31 +1471,3 @@ y = x''')
         actual_list1, actual_list2 = zip(*actual_zipped)
         self.assertEqual(list(actual_list1), expected_list1)
         self.assertEqual(list(actual_list2), expected_list2)
-
-    def test_new(self):
-        """
-        python 在创建对象时会先调用类的__new__方法获取对象，在调用对象的__init__方法初始化对象
-        __new__是一个类方法（@classmethod）
-        """
-
-        class Singleton:
-            """
-            利用__new__方法完成类的单例模式
-            """
-
-            def __new__(cls, *args, **kwargs):
-                if not hasattr(cls, "_instance"):  # 判断类属性中是否有单例存在
-                    cls._instance = super().__new__(cls)  # 获取单例对象，保存在类属性中
-                return cls._instance
-
-            def __init__(self, value):
-                self.__value = value
-
-            @property
-            def value(self):
-                return self.__value
-
-        singleton1 = Singleton(100)
-        singleton2 = Singleton(200)
-        self.assertEqual(singleton2.value, 200)
-        self.assertEqual(singleton1, singleton2)
