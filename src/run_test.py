@@ -7,9 +7,11 @@ import sys
 
 def list_packages():
     dirs = []
-    for item in os.listdir(os.path.abspath('.')):
-        if os.path.isdir(item):
-            dirs.append(item)
+    base_path = os.path.split(os.path.abspath(__file__))[0]
+    for item in os.listdir(base_path):
+        path = os.path.join(base_path, item)
+        if os.path.isdir(path):
+            dirs.append(path)
     return dirs
 
 
