@@ -367,10 +367,14 @@ class TestBuildInFunctions(TestCase):
         nums = ['one', 'two', 'three', 'four']
         self.assertTupleEqual(tuple(enumerate(nums)), ((0, 'one'), (1, 'two'), (2, 'three'), (3, 'four')))
 
-        i = 0
+        # 迭代的每一项是一个‘tuple’对象，依次为‘(0, 'one')’，‘(1, 'two')’，...
         for num in enumerate(nums):
-            self.assertEqual(num, (i, nums[i]))
-            i += 1
+            self.assertEqual((nums.index(num[1]), num[1]), num)
+
+        # 获取迭代每一项的两项内容
+        for i, num in enumerate(nums):
+            self.assertEqual(i, nums.index(num))
+            self.assertEqual(num, nums[i])
 
     def test_eval_py2(self):
         """
@@ -1471,3 +1475,16 @@ y = x''')
         actual_list1, actual_list2 = zip(*actual_zipped)
         self.assertEqual(list(actual_list1), expected_list1)
         self.assertEqual(list(actual_list2), expected_list2)
+
+    def test_frozenset(self):
+        """
+        frozenset 函数用于产生一个‘只读’的‘set’集合
+        """
+        alist = [1, 2, 3, 4, 5, 4, 3, 2, 1]
+        aset = frozenset(alist)
+        # 产生‘set’集合，重复的元素项被去除
+        self.assertSetEqual(aset, {1, 2, 3, 4, 5})
+
+        # frozenset 产生的‘set’集合没有‘add’等方法，只能读取，无法修改
+        with self.assertRaises(AttributeError):
+            aset.add(4)

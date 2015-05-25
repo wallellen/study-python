@@ -13,6 +13,7 @@ class TestRegexp(TestCase):
             re.S：'.'并且包括换行符在内的任意字符（注意：'.'不包括换行符）
             re.U：表示特殊字符集 \w, \W, \b, \B, \d, \D, \s, \S 依赖于Unicode字符属性数据库
     """
+
     def test_match(self):
         """
         re::match(pattern, str, flags=0) 根据正则表达式匹配一个字符串，返回‘True’或‘False’
@@ -52,14 +53,21 @@ class TestRegexp(TestCase):
             self.assertEqual(m.group(), n)
 
     def test_split(self):
+        """
+        re::split(pattern, str, maxsplit=0, flags=0) 通过正则表达式分割字符串，返回分割后的字符串集合
+            maxsplit 参数表示最多分割多少个字符串
+        注1
+        """
         s = 'abc    def ghi\tjkl'
-        re.split(r'\s+', s)
+        res = re.split(r'\s+', s)
+        self.assertListEqual(res, ['abc', 'def', 'ghi', 'jkl'])
 
     def test_sub(self):
         """
-        re::sub(pattern, repl, str, count=0, flags=0) 用于通过正则表达式分割字符串‘str’
-
-        count 参数
+        re::sub(pattern, repl, str, count=0, flags=0) 用于通过正则表达式查找子字符串，查找结果由‘repl’表示的函数来处理
+        count 最多分割的字符串数
+        repl 为一个形如  def repl(mo) -> None 的函数，‘mo’参数是每个查找的‘Match’对象
+        注1
         """
         s = '123a456b789c'
 
@@ -99,7 +107,42 @@ class TestRegexp(TestCase):
         """
         re.compile(pattern, flags=0): 把正则表达式语法转化成正则表达式对象
         """
-        rx = re.compile(r'(\d{1,3}\.){3}\d')
-        self.assertTrue(rx.match('192.168.0.1'))
+        rx = re.compile(r'\s+')
+        self.assertTrue(rx.match('\t'))
+        self.assertListEqual(rx.findall('1 2\t3  4'), [' ', '\t', '  '])
+        self.assertListEqual(rx.split('1 2\t3  4'), ['1', '2', '3', '4'])
 
-        self.assertEqual(rx.search('ip:192.168.0.1').start(), 3)
+        class Repl:
+            def __init__(self):
+                self.__list = []
+
+            def __call__(self, mo):
+                self.__list.append(mo.group())
+
+            @property
+            def list(self):
+                return self.__list
+
+        repl = Repl()
+        rx.sub(repl, '1 2\t3  4')
+        self.assertListEqual(repl.list, [' ', '\t', '  '])
+
+        self.assertEqual(rx.search('1\t2 3 4').start(), 1)
+
+    def test_escape(self):
+        """
+        re::escape(str) 方法用于对非‘字母’和‘数字’以外的字符进行转义，例如对'['则转义为'\['等，转义后的结果可以作为
+        正则表达式实体字符进行匹配
+        """
+        pattern = r'[-\]'
+        rx = re.compile(r'[{}]'.format(re.escape(pattern)))
+        self.assertListEqual(rx.findall(r'-\]a['), ['-', '\\', ']', '['])
+
+        # 利用'sub'和'escape'方法批量替换字符串
+        adict = {'a': 'A', 'b': 'B', 'c': 'C'}
+
+        def replace(mo):
+            return adict[mo.group(0)]
+
+        rx = re.compile('|'.join(map(re.escape, adict)))
+        self.assertEqual(rx.sub(replace, 'abcde'), 'ABCde')

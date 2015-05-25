@@ -1,5 +1,6 @@
 # coding=utf-8
 from unittest import TestCase
+import itertools
 
 
 class TestIterator(TestCase):
@@ -186,3 +187,12 @@ class TestIterator(TestCase):
             self.assertEqual(x, n)
             n += 1
     '''
+
+    def test_iterator_imap(self):
+        def any_true(predicate, sequence):
+            return True in itertools.imap(predicate, sequence)
+
+        def end_with(s, *endings):
+            return any_true(s.endsWith, endings)
+
+        itertools.imap()
