@@ -189,10 +189,24 @@ class TestIterator(TestCase):
     '''
 
     def test_iterator_imap(self):
-        def any_true(predicate, sequence):
-            return True in itertools.imap(predicate, sequence)
+        """
+        itertools.imap(function, sequence) -> iterator
+        用于以‘sequence’对象指定的集合作为参数，依次调用‘function’参数指定的函数/方法，返回每次调用结果组成的集合
+        """
+        s = 'test.jpg'
+        # 重复调用‘s.endswith’方法，并依次传入 '.jpg', '.bmp', '.png' 做为参数
+        results = list(itertools.imap(s.endswith, ['.jpg', '.bmp', '.png']))
+        self.assertTrue(results[0])
+        self.assertFalse(results[1])
+        self.assertFalse(results[2])
 
+        # 范例，判断文件名的扩展名
         def end_with(s, *endings):
-            return any_true(s.endsWith, endings)
+            return True in itertools.imap(s.endswith, endings)
 
-        itertools.imap()
+        file_names = 'test.jpg,test.png,test.bmp,test.txt'
+        file_exts = ['.jpg', '.bmp', '.png']
+        expected_results = [True, True, True, False]
+
+        for name, ok in zip(file_names.split(','), expected_results):
+            self.assertEqual(end_with(name, *file_exts), ok)
