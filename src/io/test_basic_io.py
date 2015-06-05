@@ -1,10 +1,13 @@
 # coding=utf-8
 import linecache
+import tempfile
 
 from unittest import TestCase
 import io
 import os
 from os import path
+import zipfile
+import sys
 
 
 class TestBasicIO(TestCase):
@@ -216,3 +219,32 @@ class TestBasicIO(TestCase):
         finally:
             os.remove('test.txt')
     '''
+
+    def test_temp_file(self):
+        """
+        tempfile.mkstemp([suffix, prefix, dir, text]) 函数用于打开一个‘临时文件’
+            suffix 设置临时文件的后缀（包括扩展名）
+            prefix 设置临时文件的前缀，默认为‘tmp’
+            dir 设置临时文件所在的路径，默认为系统临时文件夹
+            text 设置是否以文本方式打开文件，默认为‘False’
+
+            方法返回一个‘tuple’，包含临时文件的句柄以及临时文件的文件名（路径名）
+        """
+        handle, filename = tempfile.mkstemp('.zip')  # make a temp file
+        os.close(handle)  # close the handle of temp file
+
+        z = zipfile.ZipFile(filename, 'w')  # create ZipFile on temp file
+        z.writestr('test_temp.py', 'def f(): return \'test\'', zipfile.ZIP_DEFLATED)
+        z.close()
+
+        sys.path.insert(0, filename)  # add temp file into system path, then this file can be import
+
+        mod = __import__('test_temp')  # import temp file as a module
+        self.assertEqual(mod.f(), 'test')
+        os.unlink(filename)  # remove file from system path
+
+        ''' also can use 'import' keyword
+        import test_temp
+        self.assertEqual(test_temp.f(), 'test')
+        os.unlink(filename)
+        '''
